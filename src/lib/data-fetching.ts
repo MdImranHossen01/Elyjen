@@ -9,8 +9,11 @@ import GlobalSettings from '@/models/GlobalSettings';
 import Coupon from '@/models/Coupon';
 import Order from '@/models/Order';
 
-// Helper to serialize MongoDB data
-const serialize = (data: any) => JSON.parse(JSON.stringify(data));
+// Helper to serialize MongoDB data safely and remove Mongoose metadata/non-serializable types
+const serialize = (data: any) => {
+  if (!data) return null;
+  return JSON.parse(JSON.stringify(data));
+};
 
 /**
  * CACHE_TAGS constants for consistency
