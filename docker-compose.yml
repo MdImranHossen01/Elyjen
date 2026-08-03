@@ -1,0 +1,20 @@
+services:
+  web:
+    image: ${DOCKER_IMAGE_TAG}
+    container_name: elyjen-shop-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.local
+    deploy:
+      resources:
+        limits:
+          memory: 180M
+        reservations:
+          memory: 80M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
