@@ -220,9 +220,14 @@ export const getCachedFAQs = (_domain?: string) => {
 export const getCachedSettings = (_hostname?: string) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const settings = await GlobalSettings.findOne().lean();
-      return serialize(settings);
+      try {
+        await connectToDatabase();
+        const settings = await GlobalSettings.findOne().lean();
+        return serialize(settings);
+      } catch (error) {
+        console.error('Error fetching cached settings:', error);
+        return null;
+      }
     },
     ['settings-global'],
     { tags: [CACHE_TAGS.settings], revalidate: 3600 }

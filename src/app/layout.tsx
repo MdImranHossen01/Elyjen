@@ -148,7 +148,12 @@ export default async function RootLayout({
   const headersList = await headers();
   const hostname = headersList.get('host') || 'localhost';
   const pathname = headersList.get('x-pathname') || '';
-  const settings = await getCachedSettings(hostname);
+  let settings = null;
+  try {
+    settings = await getCachedSettings(hostname);
+  } catch (error) {
+    console.error('Error in RootLayout loading settings:', error);
+  }
 
   let jsonLd = null;
   try {

@@ -12,14 +12,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Slider } from '@/components/ui/slider';
 import {
   Filter,
   Search,
   X,
   LayoutGrid,
   LayoutList,
-  SlidersHorizontal
 } from 'lucide-react';
 import {
   Sheet,
