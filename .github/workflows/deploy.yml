@@ -81,3 +81,24 @@ jobs:
             docker-compose pull
             docker-compose up -d
             docker image prune -f
+
+            echo "Waiting for server to be ready..."
+            sleep 20
+            until curl -sf http://localhost:3000 > /dev/null; do
+              echo "Server not ready yet, waiting 5s..."
+              sleep 5
+            done
+
+            echo "Server is ready! Starting ISR warmup..."
+            SLUGS=$(curl -s http://localhost:3000/api/warmup/products 2>/dev/null || echo "[]")
+            echo "Found slugs: $SLUGS"
+
+            echo "$SLUGS" | tr -d '[]"' | tr ',' '\n' | while read SLUG; do
+              SLUG=$(echo "$SLUG" | tr -d ' ')
+              if [ -n "$SLUG" ]; then
+                curl -s "http://localhost:3000/product/$SLUG" > /dev/null
+                echo "Warmed up: /product/$SLUG"
+              fi
+            done
+
+            echo "ISR warmup complete!"
