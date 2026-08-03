@@ -1,15 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import { generateProductSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import { ProductDetailsSelector } from '@/components/templates/ServerRegistry';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { ViewTracker } from '@/components/common/ViewTracker';
 import { getCachedProductBySlug, getCachedSettings } from '@/lib/data-fetching';
 import { notFound } from 'next/navigation';
 import { getTenantDomain } from '@/lib/tenant';
+
+import connectToDatabase from '@/lib/db';
+import Product from '@/models/Product';
 
 const sanitizeForScript = (json: any) => {
   return JSON.stringify(json).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
@@ -19,13 +20,27 @@ const getProduct = async (domain: string, slug: string) => {
   return getCachedProductBySlug(domain, slug);
 };
 
+export async function generateStaticParams() {
+  try {
+    await connectToDatabase();
+    const products = await Product.find({ isPublished: true }, { slug: 1 }).lean();
+    return products.map((p: any) => ({
+      slug: p.slug,
+    }));
+  } catch (error) {
+    console.error('Error generating static params for products:', error);
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const domain = await getTenantDomain();
-  const headersList = await headers();
-  const hostname = headersList.get('host') || 'localhost';
-  const protocol = process.env.NODE_ENV === 'production' ? 'https' : 'http';
-  const baseUrl = `${protocol}://${hostname}`;
+
+  const hostEnv = process.env.NEXTAUTH_URL || '';
+  const hostname = hostEnv ? new URL(hostEnv).hostname : 'elyjen.shop';
+  const protocol = hostEnv ? new URL(hostEnv).protocol.replace(':', '') : 'https';
+  const baseUrl = hostEnv || `${protocol}://${hostname}`;
 
   const [product, settings] = await Promise.all([
     getProduct(domain, slug),
@@ -37,17 +52,17 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const cleanDescription = (product.description ?? '')
     .replace(/<[^>]*>?/gm, '') // Remove HTML tags
     .replace(/\{"type":"doc"[\s\S]*\}/g, (match: string) => {
-        try {
-            const parsed = JSON.parse(match);
-            const getText = (node: any): string => {
-                if (node.text) return node.text;
-                if (node.content) return node.content.map(getText).join(' ');
-                return '';
-            };
-            return getText(parsed);
-        } catch (e) {
-            return match;
-        }
+      try {
+        const parsed = JSON.parse(match);
+        const getText = (node: any): string => {
+          if (node.text) return node.text;
+          if (node.content) return node.content.map(getText).join(' ');
+          return '';
+        };
+        return getText(parsed);
+      } catch (e) {
+        return match;
+      }
     })
     .slice(0, 160);
 
@@ -76,14 +91,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-import { headers } from 'next/headers';
 import Script from 'next/script';
 
 export default async function ProductDetailsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const domain = await getTenantDomain();
-  const headersList = await headers();
-  const hostname = headersList.get('host') || 'localhost';
+
+  const hostEnv = process.env.NEXTAUTH_URL || '';
+  const hostname = hostEnv ? new URL(hostEnv).hostname : 'elyjen.shop';
 
   const [product, settings] = await Promise.all([
     getProduct(domain, slug),
