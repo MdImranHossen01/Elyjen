@@ -33,13 +33,18 @@ export const CACHE_TAGS = {
 export const getCachedProducts = (_domain?: string, query = {}, limit = 10, sort: any = { createdAt: -1 }) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const products = await Product.find({ isPublished: true, ...query })
-        .populate('categories')
-        .sort(sort as any)
-        .limit(limit)
-        .lean();
-      return serialize(products);
+      try {
+        await connectToDatabase();
+        const products = await Product.find({ isPublished: true, ...query })
+          .populate('categories')
+          .sort(sort as any)
+          .limit(limit)
+          .lean();
+        return serialize(products);
+      } catch (error) {
+        console.error('Error fetching cached products:', error);
+        return [];
+      }
     },
     ['products-list', JSON.stringify(query), limit.toString(), JSON.stringify(sort)],
     { revalidate: 31536000, tags: [CACHE_TAGS.products] }
@@ -49,11 +54,16 @@ export const getCachedProducts = (_domain?: string, query = {}, limit = 10, sort
 export const getCachedProductBySlug = (_domain: string | undefined, slug: string) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const product = await Product.findOne({ slug, isPublished: true })
-        .populate('categories')
-        .lean();
-      return serialize(product);
+      try {
+        await connectToDatabase();
+        const product = await Product.findOne({ slug, isPublished: true })
+          .populate('categories')
+          .lean();
+        return serialize(product);
+      } catch (error) {
+        console.error('Error fetching cached product by slug:', error);
+        return null;
+      }
     },
     ['product-detail', slug],
     { revalidate: 31536000, tags: [CACHE_TAGS.products] }
@@ -63,79 +73,79 @@ export const getCachedProductBySlug = (_domain: string | undefined, slug: string
 export const getTrendingProducts = (_domain?: string, limit = 10) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
+      try {
+        await connectToDatabase();
 
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-      // 1. Get Top Selling products in last 30 days
-      const topSellingItems = await Order.aggregate([
-        { $match: { createdAt: { $gte: thirtyDaysAgo }, status: { $ne: 'Cancelled' } } },
-        { $unwind: '$items' },
-        { $group: { _id: '$items.product', totalSales: { $sum: '$items.quantity' } } },
-        { $sort: { totalSales: -1 } },
-        { $limit: limit }
-      ]);
+        const topSellingItems = await Order.aggregate([
+          { $match: { createdAt: { $gte: thirtyDaysAgo }, status: { $ne: 'Cancelled' } } },
+          { $unwind: '$items' },
+          { $group: { _id: '$items.product', totalSales: { $sum: '$items.quantity' } } },
+          { $sort: { totalSales: -1 } },
+          { $limit: limit }
+        ]);
 
-      const topSellingIds = topSellingItems.map(item => item._id);
+        const topSellingIds = topSellingItems.map(item => item._id);
 
-      let trendingProducts = await Product.find({
-        _id: { $in: topSellingIds },
-        isPublished: true
-      }).populate('categories').lean();
-
-      // Ensure they are in the order of totalSales
-      trendingProducts.sort((a: any, b: any) => {
-        const aSales = topSellingItems.find(item => item._id.toString() === a._id.toString())?.totalSales || 0;
-        const bSales = topSellingItems.find(item => item._id.toString() === b._id.toString())?.totalSales || 0;
-        return bSales - aSales;
-      });
-
-      // 2. If not enough, fill with high ratings
-      if (trendingProducts.length < limit) {
-        const remaining = limit - trendingProducts.length;
-        const topRated = await Product.find({
-          _id: { $nin: trendingProducts.map(p => p._id) },
-          isPublished: true,
-          ratings: { $gt: 0 }
-        })
-          .populate('categories')
-          .sort({ ratings: -1, numReviews: -1 } as any)
-          .limit(remaining)
-          .lean();
-        trendingProducts = [...trendingProducts, ...topRated] as any;
-      }
-
-      // 3. If still not enough, fill with high views
-      if (trendingProducts.length < limit) {
-        const remaining = limit - trendingProducts.length;
-        const topViewed = await Product.find({
-          _id: { $nin: trendingProducts.map(p => p._id) },
-          isPublished: true,
-          views: { $gt: 0 }
-        })
-          .populate('categories')
-          .sort({ views: -1 } as any)
-          .limit(remaining)
-          .lean();
-        trendingProducts = [...trendingProducts, ...topViewed] as any;
-      }
-
-      // 4. Finally, fill with latest added
-      if (trendingProducts.length < limit) {
-        const remaining = limit - trendingProducts.length;
-        const latest = await Product.find({
-          _id: { $nin: trendingProducts.map(p => p._id) },
+        let trendingProducts = await Product.find({
+          _id: { $in: topSellingIds },
           isPublished: true
-        })
-          .populate('categories')
-          .sort({ createdAt: -1 } as any)
-          .limit(remaining)
-          .lean();
-        trendingProducts = [...trendingProducts, ...latest] as any;
-      }
+        }).populate('categories').lean();
 
-      return serialize(trendingProducts);
+        trendingProducts.sort((a: any, b: any) => {
+          const aSales = topSellingItems.find(item => item._id.toString() === a._id.toString())?.totalSales || 0;
+          const bSales = topSellingItems.find(item => item._id.toString() === b._id.toString())?.totalSales || 0;
+          return bSales - aSales;
+        });
+
+        if (trendingProducts.length < limit) {
+          const remaining = limit - trendingProducts.length;
+          const topRated = await Product.find({
+            _id: { $nin: trendingProducts.map(p => p._id) },
+            isPublished: true,
+            ratings: { $gt: 0 }
+          })
+            .populate('categories')
+            .sort({ ratings: -1, numReviews: -1 } as any)
+            .limit(remaining)
+            .lean();
+          trendingProducts = [...trendingProducts, ...topRated] as any;
+        }
+
+        if (trendingProducts.length < limit) {
+          const remaining = limit - trendingProducts.length;
+          const topViewed = await Product.find({
+            _id: { $nin: trendingProducts.map(p => p._id) },
+            isPublished: true,
+            views: { $gt: 0 }
+          })
+            .populate('categories')
+            .sort({ views: -1 } as any)
+            .limit(remaining)
+            .lean();
+          trendingProducts = [...trendingProducts, ...topViewed] as any;
+        }
+
+        if (trendingProducts.length < limit) {
+          const remaining = limit - trendingProducts.length;
+          const latest = await Product.find({
+            _id: { $nin: trendingProducts.map(p => p._id) },
+            isPublished: true
+          })
+            .populate('categories')
+            .sort({ createdAt: -1 } as any)
+            .limit(remaining)
+            .lean();
+          trendingProducts = [...trendingProducts, ...latest] as any;
+        }
+
+        return serialize(trendingProducts);
+      } catch (error) {
+        console.error('Error fetching trending products:', error);
+        return [];
+      }
     },
     ['trending-products', limit.toString()],
     { revalidate: 3600, tags: [CACHE_TAGS.products] }
@@ -147,12 +157,17 @@ export const getTrendingProducts = (_domain?: string, limit = 10) => {
 export const getCachedCategories = (_domain?: string) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const categories = await Category.find({ isActive: true })
-        .populate('parentCategory', 'name')
-        .sort({ createdAt: -1 })
-        .lean();
-      return serialize(categories);
+      try {
+        await connectToDatabase();
+        const categories = await Category.find({ isActive: true })
+          .populate('parentCategory', 'name')
+          .sort({ createdAt: -1 })
+          .lean();
+        return serialize(categories);
+      } catch (error) {
+        console.error('Error fetching cached categories:', error);
+        return [];
+      }
     },
     ['categories-list'],
     { revalidate: 31536000, tags: [CACHE_TAGS.categories] }
@@ -164,11 +179,16 @@ export const getCachedCategories = (_domain?: string) => {
 export const getCachedBanners = (_domain?: string) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const banners = await Banner.find({ isActive: true })
-        .sort({ order: 1 })
-        .lean();
-      return serialize(banners);
+      try {
+        await connectToDatabase();
+        const banners = await Banner.find({ isActive: true })
+          .sort({ order: 1 })
+          .lean();
+        return serialize(banners);
+      } catch (error) {
+        console.error('Error fetching cached banners:', error);
+        return [];
+      }
     },
     ['banners-list'],
     { revalidate: 60, tags: [CACHE_TAGS.banners] }
@@ -180,12 +200,17 @@ export const getCachedBanners = (_domain?: string) => {
 export const getCachedBlogs = (_domain?: string, limit = 10) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const blogs = await Blog.find({ isPublished: true })
-        .sort({ createdAt: -1 })
-        .limit(limit)
-        .lean();
-      return serialize(blogs);
+      try {
+        await connectToDatabase();
+        const blogs = await Blog.find({ isPublished: true })
+          .sort({ createdAt: -1 })
+          .limit(limit)
+          .lean();
+        return serialize(blogs);
+      } catch (error) {
+        console.error('Error fetching cached blogs:', error);
+        return [];
+      }
     },
     ['blogs-list', limit.toString()],
     { revalidate: 31536000, tags: [CACHE_TAGS.blogs] }
@@ -195,9 +220,14 @@ export const getCachedBlogs = (_domain?: string, limit = 10) => {
 export const getCachedBlogBySlug = (_domain: string | undefined, slug: string) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const blog = await Blog.findOne({ slug, isPublished: true }).lean();
-      return serialize(blog);
+      try {
+        await connectToDatabase();
+        const blog = await Blog.findOne({ slug, isPublished: true }).lean();
+        return serialize(blog);
+      } catch (error) {
+        console.error('Error fetching cached blog by slug:', error);
+        return null;
+      }
     },
     ['blog-detail', slug],
     { revalidate: 31536000, tags: [CACHE_TAGS.blogs] }
@@ -209,9 +239,14 @@ export const getCachedBlogBySlug = (_domain: string | undefined, slug: string) =
 export const getCachedFAQs = (_domain?: string) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const faqs = await FAQ.find({ isActive: true }).sort({ order: 1 }).lean();
-      return serialize(faqs);
+      try {
+        await connectToDatabase();
+        const faqs = await FAQ.find({ isActive: true }).sort({ order: 1 }).lean();
+        return serialize(faqs);
+      } catch (error) {
+        console.error('Error fetching cached FAQs:', error);
+        return [];
+      }
     },
     ['faqs-list'],
     { revalidate: 31536000, tags: [CACHE_TAGS.faqs] }
@@ -242,12 +277,17 @@ export const getCachedSettings = (_hostname?: string) => {
 export const getCachedActiveCoupon = (_domain?: string) => {
   return unstable_cache(
     async () => {
-      await connectToDatabase();
-      const coupon = await Coupon.findOne({
-        isActive: true,
-        expiryDate: { $gt: new Date() }
-      }).sort({ createdAt: -1 }).lean();
-      return serialize(coupon);
+      try {
+        await connectToDatabase();
+        const coupon = await Coupon.findOne({
+          isActive: true,
+          expiryDate: { $gt: new Date() }
+        }).sort({ createdAt: -1 }).lean();
+        return serialize(coupon);
+      } catch (error) {
+        console.error('Error fetching cached active coupon:', error);
+        return null;
+      }
     },
     ['active-coupon'],
     { revalidate: 3600, tags: [CACHE_TAGS.coupons] }
