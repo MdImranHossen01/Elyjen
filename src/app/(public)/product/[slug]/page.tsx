@@ -9,9 +9,6 @@ import { getCachedProductBySlug, getCachedSettings } from '@/lib/data-fetching';
 import { notFound } from 'next/navigation';
 import { getTenantDomain } from '@/lib/tenant';
 
-import connectToDatabase from '@/lib/db';
-import Product from '@/models/Product';
-
 const sanitizeForScript = (json: any) => {
   return JSON.stringify(json).replace(/</g, '\\u003c').replace(/>/g, '\\u003e');
 };
@@ -19,19 +16,6 @@ const sanitizeForScript = (json: any) => {
 const getProduct = async (domain: string, slug: string) => {
   return getCachedProductBySlug(domain, slug);
 };
-
-export async function generateStaticParams() {
-  try {
-    await connectToDatabase();
-    const products = await Product.find({ isPublished: true }, { slug: 1 }).lean();
-    return products.map((p: any) => ({
-      slug: p.slug,
-    }));
-  } catch (error) {
-    console.error('Error generating static params for products:', error);
-    return [];
-  }
-}
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

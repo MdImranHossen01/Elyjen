@@ -74,6 +74,6 @@ jobs:
             EOF
 
             echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
-            docker compose pull
-            docker compose up -d
+            docker-compose pull
+            docker-compose up -d
             docker image prune -f
