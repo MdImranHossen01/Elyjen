@@ -110,7 +110,11 @@ export default function Navbar() {
           }
         });
     } else {
-      setProfile(null);
+      Promise.resolve().then(() => {
+        if (isMounted) {
+          setProfile((prev: any) => prev === null ? prev : null);
+        }
+      });
     }
 
     return () => {

@@ -15,10 +15,18 @@ export function NewsletterV2() {
     const [subscribed, setSubscribed] = useState(false);
     
     useEffect(() => {
+        let active = true;
         const isSubscribed = localStorage.getItem('newsletter_subscribed');
         if (isSubscribed === 'true') {
-            setSubscribed(true);
+            Promise.resolve().then(() => {
+                if (active) {
+                    setSubscribed(true);
+                }
+            });
         }
+        return () => {
+            active = false;
+        };
     }, []);
 
     const handleSubscribe = async (e: React.FormEvent) => {

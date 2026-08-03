@@ -30,7 +30,9 @@ export function LoyaltyBanner({ settings }: LoyaltyBannerProps) {
     const rgb = computedColor.match(/\d+/g);
     if (rgb && rgb.length >= 3) {
       const hex = (parseInt(rgb[0]) << 16) | (parseInt(rgb[1]) << 8) | parseInt(rgb[2]);
-      setPrimaryColor(hex);
+      requestAnimationFrame(() => {
+        setPrimaryColor(hex);
+      });
     }
   }, []);
 

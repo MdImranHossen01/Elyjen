@@ -54,25 +54,32 @@ export function QuickAddModal({ product, isOpen, onClose }: QuickAddModalProps) 
     [product.variants, selectedColor, selectedSize]
   );
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
+  const [prevProductId, setPrevProductId] = useState<string | null>(null);
+
+  if (isOpen !== prevIsOpen || (product?._id || null) !== prevProductId) {
+    setPrevIsOpen(isOpen);
+    setPrevProductId(product?._id || null);
     if (isOpen) {
       const initialColor = uniqueColors[0] || null;
       setSelectedColor(initialColor);
-
+      
       const initialSizes = (product.variants || [])
         .filter((v: any) => !initialColor || v.color === initialColor)
         .map((v: any) => v.size)
         .filter(Boolean);
-      const initialSize = initialSizes[0] || null;
-      setSelectedSize(initialSize);
+      setSelectedSize(initialSizes[0] || null);
     }
-  }, [isOpen, uniqueColors, product.variants]);
+  }
 
-  useEffect(() => {
-    if (selectedSize == null || !availableSizes.includes(selectedSize)) {
+  // Adjust selection during render if dependencies change and current choice is unavailable
+  if (isOpen) {
+    if (selectedSize !== null && !availableSizes.includes(selectedSize)) {
       setSelectedSize(availableSizes[0] || null);
+    } else if (selectedSize === null && availableSizes.length > 0) {
+      setSelectedSize(availableSizes[0]);
     }
-  }, [selectedColor, selectedSize, availableSizes]);
+  }
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();

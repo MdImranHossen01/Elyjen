@@ -75,6 +75,7 @@ export default function OrderDetailsDialog({
   const [shippingNote, setShippingNote] = useState('');
 
   useEffect(() => {
+    let isMounted = true;
     const controller = new AbortController();
 
     const fetchData = async () => {
@@ -87,13 +88,17 @@ export default function OrderDetailsDialog({
 
         if (!orderRes.ok) {
           const errData = await orderRes.json().catch(() => ({}));
-          toast.error(errData.message || `Failed to load order: ${orderRes.statusText || orderRes.status}`);
+          if (isMounted) {
+            toast.error(errData.message || `Failed to load order: ${orderRes.statusText || orderRes.status}`);
+          }
           return;
         }
 
         if (!settingsRes.ok) {
           const errData = await settingsRes.json().catch(() => ({}));
-          toast.error(errData.message || `Failed to load settings: ${settingsRes.statusText || settingsRes.status}`);
+          if (isMounted) {
+            toast.error(errData.message || `Failed to load settings: ${settingsRes.statusText || settingsRes.status}`);
+          }
           return;
         }
 
@@ -102,48 +107,52 @@ export default function OrderDetailsDialog({
           settingsRes.json()
         ]);
         
-        setOrder(orderData);
-        if (orderData?.shippingAddress?.phone) {
-          fetchFraudData(orderData.shippingAddress.phone);
+        if (isMounted) {
+          setOrder(orderData);
+          if (orderData?.shippingAddress?.phone) {
+            fetchFraudData(orderData.shippingAddress.phone);
+          }
+          setSettings(settingsData);
+          setEditForm({
+            shippingAddress: {
+              fullName: orderData.shippingAddress?.fullName || '',
+              phone: orderData.shippingAddress?.phone || '',
+              street: orderData.shippingAddress?.street || '',
+              city: orderData.shippingAddress?.city || '',
+              state: orderData.shippingAddress?.state || '',
+              division: orderData.shippingAddress?.division || '',
+              zipCode: orderData.shippingAddress?.zipCode || '',
+              country: orderData.shippingAddress?.country || 'Bangladesh'
+            },
+            paymentMethod: orderData.paymentMethod || 'COD',
+            paymentStatus: orderData.paymentStatus || 'Pending',
+            transactionId: orderData.transactionId || '',
+            deliveryCharge: orderData.deliveryCharge || 0,
+            couponDiscountAmount: orderData.couponDiscountAmount || 0,
+            walletAmountUsed: orderData.walletAmountUsed || 0,
+            items: orderData.items ? orderData.items.map((item: any) => ({
+              product: item.product?._id || item.product,
+              name: item.name || '',
+              price: item.price || 0,
+              quantity: item.quantity || 1,
+              color: item.color || '',
+              size: item.size || '',
+              image: item.image || '',
+              purchasePrice: item.purchasePrice || 0
+            })) : [],
+            status: orderData.status || 'Order Placed',
+            internalNote: orderData.internalNote || ''
+          });
         }
-        setSettings(settingsData);
-        setEditForm({
-          shippingAddress: {
-            fullName: orderData.shippingAddress?.fullName || '',
-            phone: orderData.shippingAddress?.phone || '',
-            street: orderData.shippingAddress?.street || '',
-            city: orderData.shippingAddress?.city || '',
-            state: orderData.shippingAddress?.state || '',
-            division: orderData.shippingAddress?.division || '',
-            zipCode: orderData.shippingAddress?.zipCode || '',
-            country: orderData.shippingAddress?.country || 'Bangladesh'
-          },
-          paymentMethod: orderData.paymentMethod || 'COD',
-          paymentStatus: orderData.paymentStatus || 'Pending',
-          transactionId: orderData.transactionId || '',
-          deliveryCharge: orderData.deliveryCharge || 0,
-          couponDiscountAmount: orderData.couponDiscountAmount || 0,
-          walletAmountUsed: orderData.walletAmountUsed || 0,
-          items: orderData.items ? orderData.items.map((item: any) => ({
-            product: item.product?._id || item.product,
-            name: item.name || '',
-            price: item.price || 0,
-            quantity: item.quantity || 1,
-            color: item.color || '',
-            size: item.size || '',
-            image: item.image || '',
-            purchasePrice: item.purchasePrice || 0
-          })) : [],
-          status: orderData.status || 'Order Placed',
-          internalNote: orderData.internalNote || ''
-        });
       } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error('Fetch error:', error);
-          toast.error('Error loading data');
+          if (isMounted) {
+            toast.error('Error loading data');
+          }
         }
       } finally {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && isMounted) {
           setLoading(false);
         }
       }
@@ -152,20 +161,27 @@ export default function OrderDetailsDialog({
     if (open && orderId) {
       fetchData();
     } else {
-      setOrder(null);
-      setSettings(null);
-      setIsEditing(false);
-      setEditForm(null);
-      setFraudData(null);
-      setFraudLoading(false);
-      // Reset shipping fields when closing or switching orders
-      setCityId('');
-      setZoneId('');
-      setAreaId('');
-      setShippingNote('');
+      Promise.resolve().then(() => {
+        if (isMounted) {
+          setOrder(null);
+          setSettings(null);
+          setIsEditing(false);
+          setEditForm(null);
+          setFraudData(null);
+          setFraudLoading(false);
+          // Reset shipping fields when closing or switching orders
+          setCityId('');
+          setZoneId('');
+          setAreaId('');
+          setShippingNote('');
+        }
+      });
     }
 
-    return () => controller.abort();
+    return () => {
+      isMounted = false;
+      controller.abort();
+    };
   }, [open, orderId]);
 
   const handleSaveChanges = async () => {

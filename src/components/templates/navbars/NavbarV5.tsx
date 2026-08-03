@@ -43,14 +43,32 @@ export default function NavbarV5() {
   }, []);
 
   useEffect(() => {
+    let active = true;
+    let timerId: NodeJS.Timeout | null = null;
+
     if (session) {
       fetch('/api/user/profile')
         .then(res => res.json())
-        .then(data => setProfile(data))
+        .then(data => {
+          if (active) {
+            setProfile(data);
+          }
+        })
         .catch(err => console.error('Failed to fetch profile', err));
     } else {
-      setProfile(null);
+      timerId = setTimeout(() => {
+        if (active) {
+          setProfile((prev: any) => prev === null ? prev : null);
+        }
+      }, 0);
     }
+
+    return () => {
+      active = false;
+      if (timerId) {
+        clearTimeout(timerId);
+      }
+    };
   }, [session]);
 
 

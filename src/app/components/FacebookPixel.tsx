@@ -19,7 +19,15 @@ export default function FacebookPixel({
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    setMounted(true);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        setMounted(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   // Shared eventId across browser pixel and CAPI for deduplication

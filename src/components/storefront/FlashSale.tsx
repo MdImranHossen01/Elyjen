@@ -33,12 +33,16 @@ export function FlashSale({ products, saleEndTimestamp }: FlashSaleProps) {
     };
   };
 
-  const [timeLeft, setTimeLeft] = useState({ hours: 0, minutes: 0, seconds: 0 });
+  const [timeLeft, setTimeLeft] = useState(() => calculateTimeLeft());
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    setTimeLeft(calculateTimeLeft());
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        setMounted(true);
+      }
+    });
 
     const timer = setInterval(() => {
       setTimeLeft(prev => {
@@ -48,7 +52,10 @@ export function FlashSale({ products, saleEndTimestamp }: FlashSaleProps) {
         return prev;
       });
     }, 1000);
-    return () => clearInterval(timer);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
   }, []);
 
   if (!products || products.length === 0) return null;

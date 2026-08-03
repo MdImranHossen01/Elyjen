@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  ShoppingCart,
   Minus,
   Plus,
   MoreVertical,
@@ -103,23 +102,39 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
     [product.variants, selectedColor, selectedSize]
   );
 
-  // Auto-select first available options on mount or product change
-  useEffect(() => {
-    if (!product) return;
+  const [prevProductId, setPrevProductId] = useState<string | null>(null);
+  const [prevSessionUser, setPrevSessionUser] = useState<string | null>(null);
+  const currentSessionUser = session?.user?.email || (session?.user as any)?.phone || null;
 
-    const initialColor = uniqueColors[0] || null;
-    setSelectedColor(initialColor);
-
-    const initialSizes = (product.variants || [])
-      .filter((v: any) => !initialColor || v.color === initialColor)
-      .map((v: any) => v.size)
-      .filter(Boolean);
-    const initialSize = initialSizes[0] || null;
-    setSelectedSize(initialSize);
-
+  // Sync state during render when product changes or on initial mount
+  if (product?._id !== prevProductId) {
+    setPrevProductId(product?._id || null);
+    setSelectedColor(uniqueColors[0] || null);
+    setSelectedSize(null);
     setSelectedImage(0);
     setQuantity(1);
-  }, [product?._id, uniqueColors, product.variants]);
+    setEligibility(null);
+  }
+
+  if (currentSessionUser !== prevSessionUser) {
+    setPrevSessionUser(currentSessionUser);
+    setEligibility(null);
+  }
+
+  // Sync selectedSize during render if it's invalid or null
+  if (selectedSize !== null && !availableSizes.includes(selectedSize)) {
+    setSelectedSize(availableSizes[0] || null);
+  } else if (selectedSize === null && availableSizes.length > 0) {
+    setSelectedSize(availableSizes[0]);
+  }
+
+  // Update main image if variant has one
+  if (activeVariant?.image) {
+    const variantImgIndex = (product.images || []).findIndex((img: string) => img === activeVariant.image);
+    if (variantImgIndex !== -1 && selectedImage !== variantImgIndex) {
+      setSelectedImage(variantImgIndex);
+    }
+  }
 
   // Track ViewContent exactly once per product page view
   const trackedProductIdRef = useRef<string | null>(null);
@@ -148,12 +163,10 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
   // Fetch review eligibility separately to avoid unnecessary re-triggers
   useEffect(() => {
     if (!session?.user || !product?._id) {
-      setEligibility(null);
       return;
     }
 
     const controller = new AbortController();
-    setEligibility(null); // Reset to avoid stale UI
 
     async function checkEligibility() {
       try {
@@ -181,7 +194,10 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
       const element = document.getElementById('review-form');
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setShouldScrollToReviewForm(false);
+        const timer = setTimeout(() => {
+          setShouldScrollToReviewForm(false);
+        }, 0);
+        return () => clearTimeout(timer);
       } else {
         // If element not yet in DOM, retry briefly
         const timer = setTimeout(() => {
@@ -193,31 +209,16 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
     }
   }, [activeTab, shouldScrollToReviewForm]);
 
-  // Adjust selection if dependencies change and current choice is unavailable
-  useEffect(() => {
-    if (selectedSize == null || !availableSizes.includes(selectedSize)) {
-      setSelectedSize(availableSizes[0] || null);
-    }
-
-    // Update main image if variant has one
-    if (activeVariant?.image) {
-      const variantImgIndex = (product.images || []).findIndex((img: string) => img === activeVariant.image);
-      if (variantImgIndex !== -1) {
-        setSelectedImage(variantImgIndex);
-      }
-    }
-  }, [selectedColor, selectedSize, availableSizes, activeVariant, product.images]);
-
   const displayPrice = activeVariant?.price || product.price;
   const displaySalePrice = activeVariant?.salePrice || product.salePrice;
   const hasVariants = (uniqueColors.length > 0 || uniqueSizes.length > 0);
-  
+
   // Strict stock calculation: If product has variants, stock MUST come from the active variant.
   // We only fallback to product.stock if the product truly has no variants at all.
-  const displayStock = hasVariants 
+  const displayStock = hasVariants
     ? (activeVariant ? (activeVariant.stock ?? 0) : 0)
     : (product.stock ?? 0);
-    
+
   const displaySku = activeVariant?.sku || product.sku;
 
   // Debug log for troubleshooting stock discrepancies
@@ -614,13 +615,12 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
                         key={color}
                         disabled={isOutOfStock}
                         onClick={() => setSelectedColor(color)}
-                        className={`px-4 py-2 text-xs font-bold transition-all border ${
-                          selectedColor === color
-                            ? 'bg-primary/5 border-primary text-primary shadow-sm'
-                            : isOutOfStock
+                        className={`px-4 py-2 text-xs font-bold transition-all border ${selectedColor === color
+                          ? 'bg-primary/5 border-primary text-primary shadow-sm'
+                          : isOutOfStock
                             ? 'bg-muted/30 border-dashed text-muted-foreground/50 cursor-not-allowed'
                             : 'border-muted-foreground/20 text-muted-foreground hover:border-primary/50'
-                        }`}
+                          }`}
                       >
                         {color}
                         {isOutOfStock && <span className="block text-[8px] mt-0.5 opacity-50">Sold Out</span>}
@@ -648,7 +648,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
                         onClick={() => setSelectedSize(sizeName)}
                         className={`min-w-[48px] h-12 flex flex-col items-center justify-center rounded-xl border-2 font-bold transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:grayscale disabled:scale-100 disabled:cursor-not-allowed ${selectedSize === sizeName
                           ? 'border-primary bg-primary/5 ring-4 ring-primary/10 text-primary'
-                          : isAvailable 
+                          : isAvailable
                             ? 'border-muted hover:border-primary/30 text-muted-foreground'
                             : 'border-muted/50 border-dashed text-muted-foreground/30'
                           }`}
@@ -724,11 +724,11 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
               className="w-full h-14 rounded-full font-black text-xs uppercase tracking-[0.2em] border-2 border-[#075E54] text-[#075E54] hover:bg-[#075E54] hover:text-white transition-all hover:scale-[1.01] active:scale-95 flex items-center justify-center gap-2"
               onClick={() => {
                 const message = encodeURIComponent(`Hi, I'm interested in ${product.name}. Price: ${CURRENCY_SYMBOL}${Math.round(displaySalePrice || displayPrice)}`);
-                
+
                 // Parse whatsappNumber robustly
                 let cleanNumber = (whatsappNumber || '').trim();
                 let phone = '';
-                
+
                 if (cleanNumber.includes('wa.me/')) {
                   const parts = cleanNumber.split('wa.me/');
                   phone = parts[parts.length - 1];
@@ -742,23 +742,23 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
                 } else {
                   phone = cleanNumber.replace(/[^0-9]/g, '');
                 }
-                
+
                 // Strip any query parameters or non-digit chars
                 phone = phone.split('?')[0].replace(/[^0-9]/g, '');
-                
+
                 if (phone.startsWith('0') && phone.length === 11) {
                   phone = '880' + phone.substring(1);
                 }
-                
+
                 window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
               }}
             >
-              <svg 
-                className="h-5 w-5 fill-current" 
-                viewBox="0 0 24 24" 
+              <svg
+                className="h-5 w-5 fill-current"
+                viewBox="0 0 24 24"
                 xmlns="http://www.w3.org/2000/svg"
               >
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.067 2.877 1.215 3.076.149.198 2.095 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.067 2.877 1.215 3.076.149.198 2.095 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
               </svg>
               Order via WhatsApp
             </Button>
@@ -807,7 +807,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
           <DialogHeader>
             <DialogTitle className="text-xl">Delete Product</DialogTitle>
             <DialogDescription className="pt-2">
-              Are you sure you want to delete <span className="font-bold text-foreground">"{product.name}"</span>?
+              Are you sure you want to delete <span className="font-bold text-foreground">&quot;{product.name}&quot;</span>?
               This action cannot be undone and will remove all associated data including variants and reviews.
             </DialogDescription>
           </DialogHeader>

@@ -52,6 +52,8 @@ export default function ProductDetailsV2Client({ product }: ProductDetailsV2Clie
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [prevProductId, setPrevProductId] = useState(product?._id);
+
   const uniqueColors = useMemo(() =>
     Array.from(new Set((product.variants || []).map((v: any) => v.color))).filter(Boolean) as string[],
     [product.variants]
@@ -83,23 +85,23 @@ export default function ProductDetailsV2Client({ product }: ProductDetailsV2Clie
   const displaySalePrice = activeVariant?.salePrice || product.salePrice;
   const displayStock = activeVariant?.stock ?? product.stock;
 
-  useEffect(() => {
-    if (!product) return;
+  // Sync state during render when product changes
+  if (product?._id !== prevProductId) {
+    setPrevProductId(product?._id);
     setSelectedColor(uniqueColors[0] || null);
     setQuantity(1);
-  }, [product?._id, uniqueColors]);
+  }
 
-  useEffect(() => {
-    if (selectedSize == null || !availableSizes.includes(selectedSize)) {
-      setSelectedSize(availableSizes[0] || null);
-    }
-  }, [selectedColor, availableSizes, selectedSize]);
+  // Sync selectedSize during render if it's invalid or null
+  if (selectedSize == null || !availableSizes.includes(selectedSize)) {
+    setSelectedSize(availableSizes[0] || null);
+  }
 
-  useEffect(() => {
-    if (quantity > displayStock) {
-      setQuantity(Math.max(1, displayStock));
-    }
-  }, [displayStock, quantity]);
+  // Sync quantity during render if it exceeds available stock
+  const maxAllowedQuantity = Math.max(1, displayStock);
+  if (quantity > maxAllowedQuantity) {
+    setQuantity(maxAllowedQuantity);
+  }
 
   const handleAddToCart = () => {
     if (uniqueColors.length > 0 && !selectedColor) return toast.error('Select color');

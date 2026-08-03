@@ -4,8 +4,6 @@ import {
   Carousel,
   CarouselContent,
   CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
 } from "@/components/ui/carousel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Quote, Star } from "lucide-react";
@@ -45,8 +43,8 @@ const fallbackReviews = [
 
 export function Testimonials() {
   const settings = useSettings();
-  const reviews = settings?.testimonials && settings.testimonials.length > 0 
-    ? settings.testimonials 
+  const reviews = settings?.testimonials && settings.testimonials.length > 0
+    ? settings.testimonials
     : fallbackReviews;
 
   return (
@@ -58,7 +56,7 @@ export function Testimonials() {
               What our <span className="text-primary italic">Customers</span> say
             </h2>
             <p className="text-muted-foreground font-medium">
-              Don't just take our word for it. Join thousands of happy customers all over Bangladesh!
+              Don&apos;t just take our word for it. Join thousands of happy customers all over Bangladesh!
             </p>
           </div>
           <div className="flex items-center gap-2 pb-2">
@@ -101,7 +99,7 @@ export function Testimonials() {
                     ))}
                   </div>
                   <p className="text-lg leading-relaxed mb-8 flex-1 italic text-muted-foreground font-medium">
-                    "{review.content}"
+                    &apos;{review.content}&apos;
                   </p>
                   <div className="flex items-center gap-4">
                     <Avatar className="size-12 rounded-full border-2 border-primary/20 shadow-lg shadow-primary/10">

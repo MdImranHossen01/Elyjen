@@ -103,11 +103,17 @@ function Carousel({
 
   React.useEffect(() => {
     if (!api) return
-    onSelect(api)
+
+    const handleSelect = () => {
+      onSelect(api)
+    }
+
+    const timer = setTimeout(handleSelect, 0)
     api.on("reInit", onSelect)
     api.on("select", onSelect)
 
     return () => {
+      clearTimeout(timer)
       api?.off("select", onSelect)
       api?.off("reInit", onSelect)
     }

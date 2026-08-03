@@ -34,9 +34,6 @@ export default function ProductDetailsV3Client({ product }: ProductDetailsV3Clie
   const isAdmin = (session?.user as any)?.role === 'admin';
 
   const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-
   const uniqueColors = useMemo(() => 
     Array.from(new Set((product.variants || []).map((v: any) => v.color).filter(Boolean))) as any[],
     [product.variants]
@@ -47,6 +44,18 @@ export default function ProductDetailsV3Client({ product }: ProductDetailsV3Clie
     [product.variants]
   );
 
+  const [selectedColor, setSelectedColor] = useState<string | null>(() => uniqueColors[0] || null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+
+  // Sync state during render when product changes
+  const [prevProductId, setPrevProductId] = useState(product?._id);
+  if (product?._id !== prevProductId) {
+    setPrevProductId(product?._id);
+    setSelectedColor(uniqueColors[0] || null);
+    setSelectedSize(null);
+    setQuantity(1);
+  }
+
   const availableSizes = useMemo(() => {
     if (!selectedColor) return uniqueSizes;
     return (product.variants || [])
@@ -55,16 +64,12 @@ export default function ProductDetailsV3Client({ product }: ProductDetailsV3Clie
       .filter(Boolean) as any[];
   }, [product.variants, selectedColor, uniqueSizes]);
 
-  useEffect(() => {
-    if (!product) return;
-    setSelectedColor(uniqueColors[0] || null);
-  }, [product?._id, uniqueColors]);
-
-  useEffect(() => {
-    if (selectedSize == null || !availableSizes.includes(selectedSize)) {
-      setSelectedSize(availableSizes[0] || null);
-    }
-  }, [selectedColor, availableSizes, selectedSize]);
+  // Sync selectedSize during render if it's invalid or null
+  if (selectedSize !== null && !availableSizes.includes(selectedSize)) {
+    setSelectedSize(availableSizes[0] || null);
+  } else if (selectedSize === null && availableSizes.length > 0) {
+    setSelectedSize(availableSizes[0]);
+  }
 
   const activeVariant = useMemo(() => 
     (product.variants || []).find(

@@ -15,7 +15,15 @@ export default function TikTokPixel({
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    setMounted(true);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        setMounted(true);
+      }
+    });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const trackPageView = useCallback(

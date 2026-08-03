@@ -46,13 +46,6 @@ export default function ProductDetailsV5Client({ product }: ProductDetailsV5Clie
   const router = useRouter();
   const isAdmin = (session?.user as any)?.role === 'admin';
 
-  const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [activeImage, setActiveImage] = useState(product?.images?.[0] || '/placeholder.png');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
   const uniqueColors = useMemo(() =>
     Array.from(new Set((product.variants || []).map((v: any) => v.color))).filter(Boolean) as string[],
     [product.variants]
@@ -63,6 +56,23 @@ export default function ProductDetailsV5Client({ product }: ProductDetailsV5Clie
     [product.variants]
   );
 
+  const [quantity, setQuantity] = useState(1);
+  const [selectedColor, setSelectedColor] = useState<string | null>(() => uniqueColors[0] || null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [activeImage, setActiveImage] = useState(() => product?.images?.[0] || '/placeholder.png');
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sync state during render when product changes
+  const [prevProductId, setPrevProductId] = useState(product?._id);
+  if (product?._id !== prevProductId) {
+    setPrevProductId(product?._id);
+    setSelectedColor(uniqueColors[0] || null);
+    setSelectedSize(null);
+    setActiveImage(product?.images?.[0] || '/placeholder.png');
+    setQuantity(1);
+  }
+
   const availableSizes = useMemo(() =>
     (product.variants || [])
       .filter((v: any) => !selectedColor || v.color === selectedColor)
@@ -70,6 +80,13 @@ export default function ProductDetailsV5Client({ product }: ProductDetailsV5Clie
       .filter(Boolean) as string[],
     [product.variants, selectedColor]
   );
+
+  // Sync selectedSize during render if it's invalid or null
+  if (selectedSize !== null && !availableSizes.includes(selectedSize)) {
+    setSelectedSize(availableSizes[0] || null);
+  } else if (selectedSize === null && availableSizes.length > 0) {
+    setSelectedSize(availableSizes[0]);
+  }
 
   const activeVariant = useMemo(() =>
     (product.variants || []).find(
@@ -79,18 +96,6 @@ export default function ProductDetailsV5Client({ product }: ProductDetailsV5Clie
     ),
     [product.variants, selectedColor, selectedSize]
   );
-
-  useEffect(() => {
-    if (!product) return;
-    setSelectedColor(uniqueColors[0] || null);
-    setActiveImage(product.images?.[0] || '/placeholder.png');
-  }, [product?._id, uniqueColors]);
-
-  useEffect(() => {
-    if (selectedSize == null || !availableSizes.includes(selectedSize)) {
-      setSelectedSize(availableSizes[0] || null);
-    }
-  }, [selectedColor, availableSizes]);
 
   const displayPrice = activeVariant?.price || product.price;
   const displaySalePrice = activeVariant?.salePrice || product.salePrice;

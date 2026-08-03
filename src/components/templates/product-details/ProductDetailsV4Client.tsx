@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { ShoppingCart, Heart, Minus, Plus, Star, MoreVertical, Edit, Trash2, Settings, ShieldCheck, Clock, Share2, Tag, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -46,12 +46,6 @@ export default function ProductDetailsV4Client({ product }: ProductDetailsV4Clie
   const router = useRouter();
   const isAdmin = (session?.user as any)?.role === 'admin';
 
-  const [quantity, setQuantity] = useState(1);
-  const [selectedColor, setSelectedColor] = useState<string | null>(null);
-  const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
   const uniqueColors = useMemo(() =>
     Array.from(new Set((product.variants || []).map((v: any) => v.color))).filter(Boolean) as string[],
     [product.variants]
@@ -62,6 +56,21 @@ export default function ProductDetailsV4Client({ product }: ProductDetailsV4Clie
     [product.variants]
   );
 
+  const [quantity, setQuantity] = useState(1);
+  const [selectedColor, setSelectedColor] = useState<string | null>(() => uniqueColors[0] || null);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Sync state during render when product changes
+  const [prevProductId, setPrevProductId] = useState(product?._id);
+  if (product?._id !== prevProductId) {
+    setPrevProductId(product?._id);
+    setSelectedColor(uniqueColors[0] || null);
+    setSelectedSize(null);
+    setQuantity(1);
+  }
+
   const availableSizes = useMemo(() =>
     (product.variants || [])
       .filter((v: any) => !selectedColor || v.color === selectedColor)
@@ -69,6 +78,13 @@ export default function ProductDetailsV4Client({ product }: ProductDetailsV4Clie
       .filter(Boolean) as string[],
     [product.variants, selectedColor]
   );
+
+  // Sync selectedSize during render if it's invalid or null
+  if (selectedSize !== null && !availableSizes.includes(selectedSize)) {
+    setSelectedSize(availableSizes[0] || null);
+  } else if (selectedSize === null && availableSizes.length > 0) {
+    setSelectedSize(availableSizes[0]);
+  }
 
   const activeVariant = useMemo(() =>
     (product.variants || []).find(
@@ -83,22 +99,10 @@ export default function ProductDetailsV4Client({ product }: ProductDetailsV4Clie
   const displaySalePrice = activeVariant?.salePrice || product.salePrice;
   const displayStock = activeVariant?.stock ?? product.stock;
 
-  useEffect(() => {
-    if (!product) return;
-    setSelectedColor(uniqueColors[0] || null);
-  }, [product?._id, uniqueColors]);
-
-  useEffect(() => {
-    if (selectedSize == null || !availableSizes.includes(selectedSize)) {
-      setSelectedSize(availableSizes[0] || null);
-    }
-  }, [selectedColor, availableSizes, selectedSize]);
-
-  useEffect(() => {
-    if (quantity > displayStock) {
-      setQuantity(Math.max(1, displayStock));
-    }
-  }, [displayStock, quantity]);
+  // Sync quantity during render if it exceeds stock
+  if (quantity > displayStock) {
+    setQuantity(Math.max(1, displayStock));
+  }
 
   const handleAddToCart = () => {
     if (displayStock <= 0) {

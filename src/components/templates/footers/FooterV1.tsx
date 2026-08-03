@@ -62,48 +62,48 @@ export default async function FooterV1() {
             {hasSocialLinks && (
               <div className="flex items-center gap-4 mt-2">
                 {Object.entries(socialLinks).map(([platform, url]) => {
-                if (!url) return null;
-                const Icon = socialIconMap[platform];
-                if (!Icon) return null;
+                  if (!url) return null;
+                  const Icon = socialIconMap[platform];
+                  if (!Icon) return null;
 
-                let safeUrl = "#";
-                if (url && url !== '#') {
-                  try {
-                    const parsedUrl = new URL(url as string);
-                    if (['http:', 'https:', 'mailto:'].includes(parsedUrl.protocol)) {
-                      safeUrl = url as string;
-                    }
-                  } catch (e) {
-                    if (typeof url === 'string' && url.startsWith('/')) {
-                      safeUrl = url;
+                  let safeUrl = "#";
+                  if (url && url !== '#') {
+                    try {
+                      const parsedUrl = new URL(url as string);
+                      if (['http:', 'https:', 'mailto:'].includes(parsedUrl.protocol)) {
+                        safeUrl = url as string;
+                      }
+                    } catch (e) {
+                      if (typeof url === 'string' && url.startsWith('/')) {
+                        safeUrl = url;
+                      }
                     }
                   }
-                }
 
-                return (
-                  <a
-                    key={platform}
-                    href={safeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-muted-foreground hover:text-primary transition-all hover:scale-110"
-                    aria-label={socialLabels[platform] || platform}
-                  >
-                    <Icon size={20} strokeWidth={2} />
-                  </a>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col items-center text-center md:items-start md:text-left">
+                  return (
+                    <a
+                      key={platform}
+                      href={safeUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-primary transition-all hover:scale-110"
+                      aria-label={socialLabels[platform] || platform}
+                    >
+                      <Icon size={20} strokeWidth={2} />
+                    </a>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-center text-center md:items-start md:text-left">
             <h4 className="mb-4 text-sm font-semibold uppercase tracking-widest text-primary">Categories</h4>
             <ul className="grid gap-2 text-sm text-muted-foreground">
               <li>
-                <Link href="/shop?category=mens-clothing" className="hover:text-primary transition-colors">Men's Clothing</Link>
+                <Link href="/shop?category=mens-clothing" className="hover:text-primary transition-colors">Men&apos;s Clothing</Link>
               </li>
               <li>
-                <Link href="/shop?category=womens-clothing" className="hover:text-primary transition-colors">Women's Clothing</Link>
+                <Link href="/shop?category=womens-clothing" className="hover:text-primary transition-colors">Women&apos;s Clothing</Link>
               </li>
               <li>
                 <Link href="/shop?category=footwear" className="hover:text-primary transition-colors">Footwear</Link>

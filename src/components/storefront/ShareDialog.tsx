@@ -23,7 +23,10 @@ export default function ShareDialog({ isOpen, onOpenChange, title }: ShareDialog
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setShareUrl(window.location.href);
+      const timeoutId = setTimeout(() => {
+        setShareUrl(window.location.href);
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
   }, [isOpen]);
 
@@ -33,7 +36,7 @@ export default function ShareDialog({ isOpen, onOpenChange, title }: ShareDialog
       setCopied(true);
       toast.success('Link copied to clipboard!');
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       toast.error('Failed to copy link');
     }
   };

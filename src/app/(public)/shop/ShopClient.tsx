@@ -105,7 +105,9 @@ export default function ShopClient({ initialProducts, initialCategories }: ShopC
 
   useEffect(() => {
     skipClampRef.current = true;
-    setPageAndUrl(1);
+    queueMicrotask(() => {
+      setPageAndUrl(1);
+    });
   }, [selectedCategories, minPrice, maxPrice, sortBy, searchTerm, showOnlyNew, showOnlySale, showOnlyFeatured, showOnlyTrending, setPageAndUrl]);
 
   const filteredProducts = products
@@ -150,7 +152,9 @@ export default function ShopClient({ initialProducts, initialCategories }: ShopC
     if (products.length > 0) {
       const safePage = Math.max(1, Math.min(currentPage, totalPages || 1));
       if (safePage !== currentPage) {
-        setPageAndUrl(safePage);
+        queueMicrotask(() => {
+          setPageAndUrl(safePage);
+        });
       }
     }
   }, [currentPage, totalPages, products.length, setPageAndUrl]);

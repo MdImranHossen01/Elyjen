@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { Button } from '@/components/ui/button';
@@ -88,31 +88,26 @@ export default function ShopClient({ initialProducts, initialCategories, searchP
   const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1);
   const itemsPerPage = 20;
 
-  // Sync with URL params (e.g. from Navbar search)
-  useEffect(() => {
-    const urlSearch = searchParams.get('search') || searchParams.get('q');
-    if (urlSearch !== null) {
-      setSearchTerm(urlSearch);
-    }
-  }, [searchParams]);
-  const skipClampRef = useRef(false);
+  // Sync with URL params (e.g. from Navbar search) without triggering cascading renders in useEffect
+  const urlSearch = searchParams.get('search') || searchParams.get('q') || '';
+  const [prevUrlSearch, setPrevUrlSearch] = useState(urlSearch);
+  if (urlSearch !== prevUrlSearch) {
+    setPrevUrlSearch(urlSearch);
+    setSearchTerm(urlSearch);
+  }
 
   // Sync state to URL without full reload
   const setPageAndUrl = useCallback((page: number) => {
     setCurrentPage(page);
-    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-    if (page > 1) {
-      params.set('page', page.toString());
-    } else {
-      params.delete('page');
-    }
-    router.push(`${pathname}?${params.toString()}`, { scroll: false });
-  }, [pathname, router]);
+  }, []);
 
-  useEffect(() => {
-    skipClampRef.current = true;
-    setPageAndUrl(1);
-  }, [selectedCategories, minPrice, maxPrice, sortBy, searchTerm, showOnlyNew, showOnlySale, showOnlyFeatured, showOnlyTrending, setPageAndUrl]);
+  // Reset page to 1 when filters change, checking it during render to avoid useEffect cascading renders
+  const filterKey = `${selectedCategories.join(',')}-${minPrice}-${maxPrice}-${sortBy}-${searchTerm}-${showOnlyNew}-${showOnlySale}-${showOnlyFeatured}-${showOnlyTrending}`;
+  const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+  if (filterKey !== prevFilterKey) {
+    setPrevFilterKey(filterKey);
+    setCurrentPage(1);
+  }
 
   const filteredProducts = products
     .filter(p => {
@@ -143,23 +138,31 @@ export default function ShopClient({ initialProducts, initialCategories, searchP
     });
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
-  const paginatedProducts = filteredProducts.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
 
+  // Clamp page if out of bounds (handled during render to avoid cascading useEffect renders)
+  const safePage = products.length > 0 ? Math.max(1, Math.min(currentPage, totalPages || 1)) : currentPage;
+  if (products.length > 0 && safePage !== currentPage) {
+    setCurrentPage(safePage);
+  }
+
+  // Handle URL updates inside useEffect to avoid side-effects in render
   useEffect(() => {
-    if (skipClampRef.current) {
-      skipClampRef.current = false;
-      return;
-    }
-    if (products.length > 0) {
-      const safePage = Math.max(1, Math.min(currentPage, totalPages || 1));
-      if (safePage !== currentPage) {
-        setPageAndUrl(safePage);
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+    const urlPage = Number(params.get('page')) || 1;
+    if (currentPage !== urlPage) {
+      if (currentPage > 1) {
+        params.set('page', currentPage.toString());
+      } else {
+        params.delete('page');
       }
+      router.push(`${pathname}?${params.toString()}`, { scroll: false });
     }
-  }, [currentPage, totalPages, products.length, setPageAndUrl]);
+  }, [currentPage, pathname, router]);
+
+  const paginatedProducts = filteredProducts.slice(
+    (safePage - 1) * itemsPerPage,
+    safePage * itemsPerPage
+  );
 
   const toggleCategory = (slug: string) => {
     setSelectedCategories(prev =>

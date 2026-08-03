@@ -50,7 +50,9 @@ export default function NavbarV4() {
         .then(data => setProfile(data))
         .catch(err => console.error('Failed to fetch profile', err));
     } else {
-      setProfile(null);
+      Promise.resolve().then(() => {
+        setProfile(null);
+      });
     }
   }, [session]);
 

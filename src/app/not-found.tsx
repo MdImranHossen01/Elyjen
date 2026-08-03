@@ -10,13 +10,13 @@ export default function NotFound() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       {/* Abstract Background Design */}
       <div className="absolute inset-0 z-0 pointer-events-none">
-          <div className="absolute top-1/4 left-1/4 w-60 h-60 bg-primary/10 rounded-full blur-[100px]" />
-          <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/5 rounded-full blur-[120px]" />
+        <div className="absolute top-1/4 left-1/4 w-60 h-60 bg-primary/10 rounded-full blur-[100px]" />
+        <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-primary/5 rounded-full blur-[120px]" />
       </div>
 
       <div className="relative z-10 max-w-2xl w-full text-center space-y-8">
         {/* Animated Error Code */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
@@ -26,19 +26,19 @@ export default function NotFound() {
             404
           </h1>
           <div className="absolute inset-0 flex items-center justify-center">
-             <motion.div 
-               animate={{ y: [0, -10, 0] }} 
-               transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-               className="bg-background/80 backdrop-blur-sm border-2 border-primary/20 rounded-2xl py-2 px-6 shadow-2xl"
-             >
-                <span className="text-xl md:text-2xl font-bold text-primary tracking-tight">Something is missing</span>
-             </motion.div>
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+              className="bg-background/80 backdrop-blur-sm border-2 border-primary/20 rounded-2xl py-2 px-6 shadow-2xl"
+            >
+              <span className="text-xl md:text-2xl font-bold text-primary tracking-tight">Something is missing</span>
+            </motion.div>
           </div>
         </motion.div>
 
         {/* Text and Actions */}
         <div className="space-y-4">
-          <motion.h2 
+          <motion.h2
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.6 }}
@@ -46,18 +46,18 @@ export default function NotFound() {
           >
             Looking for something?
           </motion.h2>
-          <motion.p 
+          <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4, duration: 0.6 }}
             className="text-muted-foreground text-sm md:text-base max-w-md mx-auto leading-relaxed"
           >
-            We couldn't find the page you're looking for. It might have been moved or doesn't exist anymore.
+            We couldn&apos;t find the page you&apos;re looking for. It might have been moved or doesn&apos;t exist anymore.
           </motion.p>
         </div>
 
         {/* CTA Buttons */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 0.6 }}
@@ -79,18 +79,18 @@ export default function NotFound() {
 
         {/* Footer Link */}
         <motion.div
-           initial={{ opacity: 0 }}
-           animate={{ opacity: 1 }}
-           transition={{ delay: 0.8 }}
-           className="pt-12"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.8 }}
+          className="pt-12"
         >
-            <button 
-                onClick={() => window.history.back()}
-                className="text-muted-foreground text-sm flex items-center gap-1.5 mx-auto hover:text-primary transition-colors font-medium border-b border-transparent hover:border-primary/30 pb-0.5"
-            >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Go to previous page
-            </button>
+          <button
+            onClick={() => window.history.back()}
+            className="text-muted-foreground text-sm flex items-center gap-1.5 mx-auto hover:text-primary transition-colors font-medium border-b border-transparent hover:border-primary/30 pb-0.5"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" />
+            Go to previous page
+          </button>
         </motion.div>
       </div>
     </div>

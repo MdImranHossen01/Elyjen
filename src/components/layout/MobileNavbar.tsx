@@ -46,7 +46,9 @@ export function MobileNavbar({ navItems, categories }: MobileNavbarProps) {
         .then(data => setProfile(data))
         .catch(err => console.error('Failed to fetch profile', err));
     } else {
-      setProfile(null);
+      Promise.resolve().then(() => {
+        setProfile(null);
+      });
     }
   }, [status]);
 

@@ -41,14 +41,24 @@ export default function NavbarV3() {
   }, []);
 
   useEffect(() => {
+    let isMounted = true;
     if (session) {
       fetch('/api/user/profile')
         .then(res => res.json())
-        .then(data => setProfile(data))
+        .then(data => {
+          if (isMounted) setProfile(data);
+        })
         .catch(err => console.error('Failed to fetch profile', err));
     } else {
-      setProfile(null);
+      Promise.resolve().then(() => {
+        if (isMounted) {
+          setProfile((prev: any) => prev === null ? prev : null);
+        }
+      });
     }
+    return () => {
+      isMounted = false;
+    };
   }, [session]);
 
 

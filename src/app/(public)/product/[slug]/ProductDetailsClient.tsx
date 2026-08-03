@@ -92,10 +92,11 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
     [product.variants, selectedColor, selectedSize]
   );
 
-  // Auto-select first available options on mount or product change
-  useEffect(() => {
-    if (!product) return;
+  const [prevProductId, setPrevProductId] = useState<string | null>(null);
 
+  // Sync state during render when product changes or on initial mount
+  if (product?._id !== prevProductId) {
+    setPrevProductId(product?._id || null);
     const initialColor = uniqueColors[0] || null;
     setSelectedColor(initialColor);
 
@@ -103,27 +104,25 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
       .filter((v: any) => !initialColor || v.color === initialColor)
       .map((v: any) => v.size)
       .filter(Boolean);
-    const initialSize = initialSizes[0] || null;
-    setSelectedSize(initialSize);
-
+    setSelectedSize(initialSizes[0] || null);
     setSelectedImage(0);
     setQuantity(1);
-  }, [product?._id, uniqueColors, product.variants]);
+  }
 
-  // Adjust selection if dependencies change and current choice is unavailable
-  useEffect(() => {
-    if (selectedSize == null || !availableSizes.includes(selectedSize)) {
-      setSelectedSize(availableSizes[0] || null);
-    }
+  // Adjust selection during render if dependencies change and current choice is unavailable
+  if (selectedSize !== null && !availableSizes.includes(selectedSize)) {
+    setSelectedSize(availableSizes[0] || null);
+  } else if (selectedSize === null && availableSizes.length > 0) {
+    setSelectedSize(availableSizes[0]);
+  }
 
-    // Update main image if variant has one
-    if (activeVariant?.image) {
-      const variantImgIndex = (product.images || []).findIndex((img: string) => img === activeVariant.image);
-      if (variantImgIndex !== -1) {
-        setSelectedImage(variantImgIndex);
-      }
+  // Update main image if variant has one
+  if (activeVariant?.image) {
+    const variantImgIndex = (product.images || []).findIndex((img: string) => img === activeVariant.image);
+    if (variantImgIndex !== -1 && selectedImage !== variantImgIndex) {
+      setSelectedImage(variantImgIndex);
     }
-  }, [selectedColor, selectedSize, availableSizes, activeVariant, product.images]);
+  }
 
   const displayPrice = activeVariant?.price || product.price;
   const displaySalePrice = activeVariant?.salePrice || product.salePrice;
@@ -557,7 +556,7 @@ export default function ProductDetailsClient({ product }: ProductDetailsClientPr
           <DialogHeader>
             <DialogTitle className="text-xl">Delete Product</DialogTitle>
             <DialogDescription className="pt-2">
-              Are you sure you want to delete <span className="font-bold text-foreground">"{product.name}"</span>?
+              Are you sure you want to delete <span className="font-bold text-foreground">&quot;{product.name}&quot;</span>?
               This action cannot be undone and will remove all associated data including variants and reviews.
             </DialogDescription>
           </DialogHeader>

@@ -60,21 +60,43 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
     [product.variants, selectedColor, selectedSize]
   );
 
-  useEffect(() => {
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
+  const [prevProductId, setPrevProductId] = useState<string | null>(null);
+
+  if (isOpen !== prevIsOpen || (product?._id || null) !== prevProductId) {
+    setPrevIsOpen(isOpen);
+    setPrevProductId(product?._id || null);
     if (isOpen) {
       const initialColor = uniqueColors[0] || null;
       setSelectedColor(initialColor);
-
+      
       const initialSizes = (product.variants || [])
         .filter((v: any) => !initialColor || v.color === initialColor)
         .map((v: any) => v.size)
         .filter(Boolean);
-      const initialSize = initialSizes[0] || null;
-      setSelectedSize(initialSize);
+      setSelectedSize(initialSizes[0] || null);
       setQuantity(1);
       setActiveImage(product.images?.[0] || '/placeholder.jpg');
+    }
+  }
 
-      // Track ViewContent for Quick View
+  // Sync selectedSize during render if dependencies change and current choice is unavailable
+  if (isOpen) {
+    if (selectedSize !== null && !availableSizes.includes(selectedSize)) {
+      setSelectedSize(availableSizes[0] || null);
+    } else if (selectedSize === null && availableSizes.length > 0) {
+      setSelectedSize(availableSizes[0]);
+    }
+  }
+
+  // Update activeImage during render if activeVariant has one
+  if (isOpen && activeVariant?.image && activeImage !== activeVariant.image) {
+    setActiveImage(activeVariant.image);
+  }
+
+  // Track ViewContent for Quick View side-effect
+  useEffect(() => {
+    if (isOpen && product) {
       fbEvent('ViewContent', {
         content_name: product.name,
         content_category: product.categories?.[0]?.name || 'Uncategorized',
@@ -88,19 +110,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
         fn: session?.user?.name || undefined
       });
     }
-  }, [isOpen, uniqueColors, product.variants, product.images, session]);
-
-  useEffect(() => {
-    if (selectedSize == null || !availableSizes.includes(selectedSize)) {
-      setSelectedSize(availableSizes[0] || null);
-    }
-  }, [selectedColor, availableSizes]);
-
-  useEffect(() => {
-    if (activeVariant?.image) {
-      setActiveImage(activeVariant.image);
-    }
-  }, [activeVariant]);
+  }, [isOpen, product, session]);
 
   const displayPrice = activeVariant?.price || product.price;
   const displaySalePrice = activeVariant?.salePrice || product.salePrice;

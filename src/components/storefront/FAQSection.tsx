@@ -1,11 +1,8 @@
 'use client';
 
-import { Badge } from "@/components/ui/badge";
-import { HelpCircle, ArrowRight, MessageCircle } from "lucide-react";
-import Link from "next/link";
+import { HelpCircle, MessageCircle } from "lucide-react";
 import dynamic from 'next/dynamic';
 import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
 import AnimatedList from "../bits/AnimatedList";
 import faqAnimation from "../../../public/assets/ecomfaq.json";
 
@@ -29,7 +26,7 @@ export function FAQSection({ faqs }: { faqs: FAQItem[] }) {
                 <div className="flex flex-col md:flex-row items-center md:items-end justify-between mb-16 gap-6">
                     <div className="flex flex-col items-center md:items-start text-center md:text-left space-y-4">
                         <h2 className="text-2xl md:text-4xl font-black tracking-tighter">
-                            Got Questions? We've Got <span className="text-primary italic">Answers</span>
+                            Got Questions? We&apos;ve Got <span className="text-primary italic">Answers</span>
                         </h2>
                     </div>
 

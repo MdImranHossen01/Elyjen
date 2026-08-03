@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Ticket, Plus, Wallet, Clock } from 'lucide-react';
+import { Ticket, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 
@@ -47,9 +47,17 @@ function Countdown({ targetDate }: { targetDate: Date }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        setMounted(true);
+      }
+    });
     const id = setInterval(() => setTime(calcTimeLeft()), 1000);
-    return () => clearInterval(id);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
   }, []);
 
   if (!mounted) return null;

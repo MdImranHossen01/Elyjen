@@ -35,6 +35,7 @@ export default function CategoryV1({ categories }: CategoryShowcaseProps) {
   const onSelect = useCallback(() => {
     if (!emblaApi) return;
     setSelectedIndex(emblaApi.selectedScrollSnap());
+    setScrollSnaps(emblaApi.scrollSnapList());
   }, [emblaApi]);
 
   const scrollTo = useCallback((index: number) => {
@@ -43,12 +44,16 @@ export default function CategoryV1({ categories }: CategoryShowcaseProps) {
 
   useEffect(() => {
     if (!emblaApi) return;
-    onSelect();
-    setScrollSnaps(emblaApi.scrollSnapList());
+    
+    const timer = setTimeout(() => {
+      onSelect();
+    }, 0);
+
     emblaApi.on('select', onSelect);
     emblaApi.on('reInit', onSelect);
 
     return () => {
+      clearTimeout(timer);
       emblaApi.off('select', onSelect);
       emblaApi.off('reInit', onSelect);
     };

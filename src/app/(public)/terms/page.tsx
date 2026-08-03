@@ -75,7 +75,7 @@ export default async function TermsPage() {
                 <h2 className="text-2xl font-bold m-0 italic">1. Agreement to Terms</h2>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                By accessing and using this website, you accept and agree to be bound by the terms and provision of this agreement. In addition, when using {brandName}'s particular services, you shall be subject to any posted guidelines or rules applicable to such services.
+                By accessing and using this website, you accept and agree to be bound by the terms and provision of this agreement. In addition, when using {brandName}&apos;s particular services, you shall be subject to any posted guidelines or rules applicable to such services.
               </p>
             </div>
 
@@ -122,7 +122,7 @@ export default async function TermsPage() {
                 Our delivery times are estimates and not guarantees. We work with trusted partners to ensure your products arrive safely.
               </p>
               <p className="text-muted-foreground leading-relaxed mt-4">
-                Please refer to our separate "Return Policy" for detailed information on how to return items. Generally, items must be returned in their original packaging with all tags attached to be eligible for a refund or exchange.
+                Please refer to our separate &quot;Return Policy&quot; for detailed information on how to return items. Generally, items must be returned in their original packaging with all tags attached to be eligible for a refund or exchange.
               </p>
             </div>
 

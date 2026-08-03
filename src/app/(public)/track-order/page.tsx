@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Truck, Search, Package, MapPin, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -74,16 +74,16 @@ export default function TrackOrderPage() {
                         <form onSubmit={handleTrack} className="flex flex-col sm:flex-row gap-4">
                             <div className="relative flex-1">
                                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                                <Input 
-                                    placeholder="Enter Order ID (e.g. #ORD12345)" 
+                                <Input
+                                    placeholder="Enter Order ID (e.g. #ORD12345)"
                                     className="h-14 pl-12 rounded-2xl border-2 focus-visible:ring-primary bg-background"
                                     value={orderId}
                                     onChange={(e) => setOrderId(e.target.value)}
                                 />
                             </div>
-                            <Button 
-                                type="submit" 
-                                size="lg" 
+                            <Button
+                                type="submit"
+                                size="lg"
                                 disabled={loading}
                                 className="h-14 px-10 rounded-2xl font-bold gap-2 text-lg"
                             >
@@ -111,11 +111,11 @@ export default function TrackOrderPage() {
                             {/* Progress Tracker */}
                             <div className="relative">
                                 <div className="absolute top-1/2 left-0 w-full h-1 bg-muted -translate-y-1/2 hidden md:block" />
-                                <div 
-                                    className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 transition-all duration-1000 hidden md:block" 
+                                <div
+                                    className="absolute top-1/2 left-0 h-1 bg-primary -translate-y-1/2 transition-all duration-1000 hidden md:block"
                                     style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
                                 />
-                                
+
                                 <div className="grid grid-cols-1 md:grid-cols-5 gap-8 relative">
                                     {steps.map((step, index) => {
                                         const Icon = step.icon;
@@ -204,7 +204,7 @@ export default function TrackOrderPage() {
                         <AlertCircle className="h-10 w-10 text-red-500 mx-auto" />
                         <h3 className="text-xl font-bold text-red-500">Order ID Not Found</h3>
                         <p className="text-sm text-red-600/70">
-                            We couldn't find any order with the ID you provided. Please double-check your receipt or email confirmation.
+                            We couldn&apos;t find any order with the ID you provided. Please double-check your receipt or email confirmation.
                         </p>
                     </div>
                 )}
