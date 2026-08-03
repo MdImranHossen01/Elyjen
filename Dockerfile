@@ -8,6 +8,15 @@ RUN npm ci --legacy-peer-deps
 
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# Build-time env vars for generateStaticParams (SSG)
+ARG MONGODB_URI
+ARG NEXTAUTH_URL
+ARG NEXTAUTH_SECRET
+ENV MONGODB_URI=$MONGODB_URI
+ENV NEXTAUTH_URL=$NEXTAUTH_URL
+ENV NEXTAUTH_SECRET=$NEXTAUTH_SECRET
+
 RUN npm run build
 
 # 2. Production runner stage

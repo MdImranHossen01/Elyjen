@@ -35,6 +35,10 @@ jobs:
           tags: ${{ env.DOCKER_IMAGE_TAG }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          build-args: |
+            MONGODB_URI=${{ secrets.MONGODB_URI }}
+            NEXTAUTH_URL=${{ secrets.NEXTAUTH_URL }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
 
   deploy:
     needs: build-and-push
