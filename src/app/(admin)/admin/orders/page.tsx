@@ -65,12 +65,19 @@ const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
 const fraudCache: { [phone: string]: { success_ratio: number; total_parcel: number } | null } = {};
 const fraudPendingRequests: { [phone: string]: Promise<any> | null } = {};
 
-function FraudCheckBadge({ phone }: { phone?: string }) {
-  const [data, setData] = useState<any>(null);
+function FraudCheckBadge({ phone, initialData }: { phone?: string; initialData?: any }) {
+  const [data, setData] = useState<any>(() => {
+    if (initialData?.success_ratio !== undefined) {
+      if (phone) fraudCache[phone] = initialData;
+      return initialData;
+    }
+    return phone && fraudCache[phone] !== undefined ? fraudCache[phone] : null;
+  });
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!phone) return;
+    if (data?.success_ratio !== undefined) return;
 
     if (fraudCache[phone] !== undefined) {
       setData(fraudCache[phone]);
@@ -109,7 +116,7 @@ function FraudCheckBadge({ phone }: { phone?: string }) {
     };
 
     fetchFraud();
-  }, [phone]);
+  }, [phone, data]);
 
   if (loading) {
     return <span className="text-[10px] text-muted-foreground ml-1.5 animate-pulse font-body">Checking...</span>;
@@ -488,10 +495,12 @@ function OrdersContent() {
         setStatusCounts(data.statusCounts);
       }
 
-      // Also fetch settings for the invoice generator
-      const settingsRes = await fetch('/api/settings');
-      if (settingsRes.ok) {
-        setSettings(await settingsRes.json());
+      // Also fetch settings for the invoice generator (only once)
+      if (!settings) {
+        const settingsRes = await fetch('/api/settings');
+        if (settingsRes.ok) {
+          setSettings(await settingsRes.json());
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to load orders');
@@ -1115,7 +1124,7 @@ function OrdersContent() {
                         </div>
                         {order.shippingAddress?.phone && (
                           <div className="mt-0.5">
-                            <FraudCheckBadge phone={order.shippingAddress.phone} />
+                            <FraudCheckBadge phone={order.shippingAddress.phone} initialData={order.fraudSummary} />
                           </div>
                         )}
                         <span className="text-muted-foreground truncate max-w-[150px]">{order.user?.email || 'No Email'}</span>

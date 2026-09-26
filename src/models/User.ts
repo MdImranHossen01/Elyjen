@@ -95,6 +95,8 @@ const UserSchema: Schema<IUser> = new Schema(
 
 // Make email unique per domain for multi-tenant support
 UserSchema.index({ email: 1, domain: 1 }, { unique: true });
+UserSchema.index({ role: 1 });
+UserSchema.index({ isSubscriptionActive: 1 });
 
 UserSchema.pre('save', async function () {
   if (!this.isModified('password') || !this.password) return;

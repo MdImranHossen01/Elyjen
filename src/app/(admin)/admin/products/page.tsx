@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import {
@@ -63,8 +63,17 @@ function ProductsContent() {
     }
   };
 
+  const isInitialMount = useRef(true);
+
   useEffect(() => {
     const controller = new AbortController();
+
+    if (isInitialMount.current || !search.trim()) {
+      isInitialMount.current = false;
+      fetchProducts(controller.signal, currentPage, search);
+      return () => controller.abort();
+    }
+
     const delayDebounceFn = setTimeout(() => {
       fetchProducts(controller.signal, currentPage, search);
     }, 300);

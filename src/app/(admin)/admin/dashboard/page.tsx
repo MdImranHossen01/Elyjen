@@ -72,13 +72,16 @@ export default function AdminDashboard() {
 
   const [debouncedDateRange, setDebouncedDateRange] = useState(dateRange);
 
-  // Debounce date range changes
+  // Debounce date range changes (avoid double-fetching on initial load)
   useEffect(() => {
+    if (dateRange.from === debouncedDateRange.from && dateRange.to === debouncedDateRange.to) {
+      return;
+    }
     const timer = setTimeout(() => {
       setDebouncedDateRange(dateRange);
-    }, 500);
+    }, 400);
     return () => clearTimeout(timer);
-  }, [dateRange]);
+  }, [dateRange, debouncedDateRange.from, debouncedDateRange.to]);
 
   const handleDateChange = (key: 'from' | 'to', value: string) => {
     const newDate = parseISO(value);
@@ -107,16 +110,19 @@ export default function AdminDashboard() {
     });
   };
 
-  const fetchStats = async () => {
+  const fetchStats = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
     try {
-      const query = new URLSearchParams({
+      const params = new URLSearchParams({
         from: debouncedDateRange.from,
         to: debouncedDateRange.to,
-      }).toString();
+      });
+      if (forceRefresh) {
+        params.set('refresh', 'true');
+      }
       
-      const response = await fetch(`/api/admin/dashboard/stats?${query}`);
+      const response = await fetch(`/api/admin/dashboard/stats?${params.toString()}`);
       if (response.ok) {
         const stats = await response.json();
         setData(stats);
@@ -227,7 +233,7 @@ export default function AdminDashboard() {
               />
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={fetchStats} className="h-10 px-4 w-full sm:w-auto font-bold">
+          <Button variant="outline" size="sm" onClick={() => fetchStats(true)} className="h-10 px-4 w-full sm:w-auto font-bold">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Refresh'}
           </Button>
         </div>

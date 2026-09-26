@@ -99,6 +99,9 @@ const ProductSchema: Schema<IProduct> = new Schema(
 
 ProductSchema.index({ name: 1 }); // Optimized for search
 ProductSchema.index({ categories: 1 }); // Optimized for category filtering
+ProductSchema.index({ stock: 1 }); // Optimized for low-stock dashboard queries
+ProductSchema.index({ createdAt: -1 }); // Optimized for sorting
+ProductSchema.index({ isPublished: 1, createdAt: -1 }); // Optimized for storefront query
 
 ProductSchema.pre('validate', function(this: any) {
   // Main product validation

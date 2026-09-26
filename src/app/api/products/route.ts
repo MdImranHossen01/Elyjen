@@ -47,10 +47,11 @@ export async function GET(req: NextRequest) {
 
     const [products, total] = await Promise.all([
       Product.find(query)
-        .populate('categories')
+        .populate('categories', 'name slug')
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Product.countDocuments(query)
     ]);
 

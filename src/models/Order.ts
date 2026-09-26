@@ -120,6 +120,17 @@ const OrderSchema: Schema<IOrder> = new Schema(
   { timestamps: true }
 );
 
+// Performance Indexes for Dashboard and Queries
+OrderSchema.index({ createdAt: -1 });
+OrderSchema.index({ status: 1, createdAt: -1 });
+OrderSchema.index({ status: 1, deletedAt: 1, createdAt: -1 });
+OrderSchema.index({ deletedAt: 1, createdAt: -1 });
+OrderSchema.index({ slug: 1 });
+OrderSchema.index({ user: 1, createdAt: -1 });
+OrderSchema.index({ "shippingAddress.phone": 1 });
+OrderSchema.index({ "shippingAddress.fullName": 1 });
+OrderSchema.index({ shortId: 1 });
+
 const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 
 export default Order;

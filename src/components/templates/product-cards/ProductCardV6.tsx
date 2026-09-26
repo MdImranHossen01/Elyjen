@@ -40,10 +40,19 @@ export default function ProductCardV6({ product, isFlashSale, priority }: Produc
   const { data: session, status } = useSession();
   const wishlist = useAppSelector((state) => state.wishlist.items);
   const isInWishlist = wishlist.includes(product._id);
-  const hasVariants = product.variants && product.variants.length > 0;
+  const hasVariants = Boolean(product.variants && product.variants.length > 0);
+
+  // Check if all variants are out of stock (or base stock if no variants)
+  const isOutOfStock = hasVariants
+    ? !product.variants?.some((v: any) => (Number(v?.stock) || 0) > 0)
+    : (Number(product.stock) || 0) <= 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isOutOfStock) {
+      toast.error('This product is out of stock');
+      return;
+    }
     if (hasVariants) {
       router.push(`/product/${product.slug}`);
     } else {
@@ -80,6 +89,7 @@ export default function ProductCardV6({ product, isFlashSale, priority }: Produc
 
   const handleBuyNow = (e: React.MouseEvent) => {
     e.preventDefault();
+    if (isOutOfStock) return;
     if (hasVariants) {
       router.push(`/product/${product.slug}`);
       return;
@@ -141,11 +151,26 @@ export default function ProductCardV6({ product, isFlashSale, priority }: Produc
             src={product.images?.[0] || '/placeholder.png'}
             alt={product.name}
             fill
-            className="object-cover transition-transform duration-700 group-hover:scale-110"
+            className={`object-cover transition-transform duration-700 ${isOutOfStock ? 'opacity-65 grayscale-[25%]' : 'group-hover:scale-110'}`}
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             priority={priority}
           />
         </Link>
+
+        {/* Out of Stock Watermark */}
+        {isOutOfStock && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none p-3 select-none">
+            {/* Subtle semi-transparent backdrop */}
+            <div className="absolute inset-0 bg-background/40 backdrop-blur-[1.5px]" />
+
+            {/* Watermark Stamp */}
+            <div className="relative transform -rotate-12 border-2 border-destructive/80 outline outline-1 outline-destructive/40 outline-offset-2 bg-background/90 px-3.5 py-1.5 sm:px-5 sm:py-2 shadow-2xl text-center">
+              <span className="block text-xs sm:text-sm md:text-base font-black tracking-[0.25em] uppercase text-destructive">
+                Out of Stock
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Product Info */}
@@ -174,11 +199,11 @@ export default function ProductCardV6({ product, isFlashSale, priority }: Produc
         <div className="flex flex-col sm:flex-row gap-2 pt-2 transition-all duration-300 sm:opacity-0 sm:translate-y-2 sm:group-hover:opacity-100 sm:group-hover:translate-y-0">
           <Button
             size="sm"
-            className="w-full rounded-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm sm:text-base h-11 sm:h-10 shadow-lg shadow-primary/20 transition-all active:scale-95 py-2"
+            className="w-full rounded-none bg-primary hover:bg-primary/90 text-primary-foreground font-bold text-sm sm:text-base h-11 sm:h-10 shadow-lg shadow-primary/20 transition-all active:scale-95 py-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
             onClick={handleBuyNow}
-            disabled={product.stock === 0}
+            disabled={isOutOfStock}
           >
-            {product.stock === 0 ? 'Out of Stock' : 'অর্ডার করুন'}
+            {isOutOfStock ? 'Out of Stock' : 'অর্ডার করুন'}
           </Button>
         </div>
       </div>

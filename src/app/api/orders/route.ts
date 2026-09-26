@@ -7,6 +7,7 @@ import User from '@/models/User';
 import GlobalSettings from '@/models/GlobalSettings';
 import WalletTransaction from '@/models/WalletTransaction';
 import Coupon from '@/models/Coupon';
+import FraudCheck from '@/models/FraudCheck';
 import { auth } from '@/auth';
 
 import { z } from 'zod';
@@ -581,73 +582,41 @@ export async function GET(req: NextRequest) {
       query = { user: userId, deletedAt: null };
     }
 
-    const totalCount = await Order.countDocuments(query);
-    
-    let ordersQuery = Order.find(query).sort({ createdAt: -1 });
+    let totalCount = 0;
+    let orders: any[] = [];
+    const statusCounts: Record<string, number> = {
+      All: 0,
+      'Order Placed': 0,
+      Confirmed: 0,
+      Paid: 0,
+      Hold: 0,
+      'Ready for Delivery': 0,
+      'Released for Delivery': 0,
+      Delivered: 0,
+      Cancelled: 0
+    };
 
     if (fetchAll && isAdmin) {
-      ordersQuery = ordersQuery.skip((page - 1) * limit).limit(limit);
-    }
-
-    const orders = await ordersQuery.populate('user', 'name email');
-
-    let processedOrders = orders;
-    if (fetchAll && isAdmin) {
-      processedOrders = await Promise.all(orders.map(async (order: any) => {
-        const phone = order.shippingAddress?.phone;
-        if (!phone) return { ...order.toObject(), isRepeat: false, isDuplicate: false };
-
-        const otherOrders = await Order.find({
-          "shippingAddress.phone": phone,
-          _id: { $ne: order._id },
-          deletedAt: null
-        }).select('items');
-
-        if (otherOrders.length === 0) {
-          return { ...order.toObject(), isRepeat: false, isDuplicate: false };
-        }
-
-        const isDuplicate = otherOrders.some(other => {
-          if (other.items.length !== order.items.length) return false;
-          return order.items.every((item: any) => {
-            return other.items.some((otherItem: any) => {
-              return String(otherItem.product) === String(item.product) &&
-                     String(otherItem.color || '') === String(item.color || '') &&
-                     String(otherItem.size || '') === String(item.size || '') &&
-                     otherItem.quantity === item.quantity;
-            });
-          });
-        });
-
-        return {
-          ...order.toObject(),
-          isRepeat: true,
-          isDuplicate
-        };
-      })) as any[];
-    }
-
-    if (fetchAll && isAdmin) {
-      // Calculate status counts based on base query (without status filter)
       const baseQuery = { ...query };
       delete baseQuery.status;
 
-      const countsAggregate = await Order.aggregate([
-        { $match: baseQuery },
-        { $group: { _id: "$status", count: { $sum: 1 } } }
+      // Run totalCount, ordersQuery, and statusCounts concurrently
+      const [countResult, ordersResult, countsAggregate] = await Promise.all([
+        Order.countDocuments(query),
+        Order.find(query)
+          .sort({ createdAt: -1 })
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .populate('user', 'name email')
+          .lean(),
+        Order.aggregate([
+          { $match: baseQuery },
+          { $group: { _id: "$status", count: { $sum: 1 } } }
+        ])
       ]);
 
-      const statusCounts: Record<string, number> = {
-        All: 0,
-        'Order Placed': 0,
-        Confirmed: 0,
-        Paid: 0,
-        Hold: 0,
-        'Ready for Delivery': 0,
-        'Released for Delivery': 0,
-        Delivered: 0,
-        Cancelled: 0
-      };
+      totalCount = countResult;
+      orders = ordersResult;
 
       let totalAll = 0;
       countsAggregate.forEach((item: any) => {
@@ -658,6 +627,76 @@ export async function GET(req: NextRequest) {
       });
       statusCounts['All'] = totalAll;
 
+      // Fast batch repeat & duplicate detection + cached fraud check in ONE single DB query
+      let processedOrders = orders;
+      if (orders.length > 0) {
+        const phones = Array.from(new Set(orders.map((o: any) => o.shippingAddress?.phone).filter(Boolean)));
+
+        if (phones.length > 0) {
+          const [allOtherOrders, cachedFraudList] = await Promise.all([
+            Order.find({
+              "shippingAddress.phone": { $in: phones },
+              deletedAt: null
+            }).select('_id shippingAddress.phone items').lean(),
+            FraudCheck.find({ phone: { $in: phones } }).lean()
+          ]);
+
+          const ordersByPhone = new Map<string, any[]>();
+          for (const other of allOtherOrders) {
+            const p = other.shippingAddress?.phone;
+            if (!p) continue;
+            if (!ordersByPhone.has(p)) ordersByPhone.set(p, []);
+            ordersByPhone.get(p)!.push(other);
+          }
+
+          const fraudByPhone = new Map<string, any>();
+          for (const f of cachedFraudList) {
+            if (f.phone && f.data) {
+              const summary = f.data.summary || (f.data.status === 'success' ? f.data.data?.summary : null);
+              if (summary) fraudByPhone.set(f.phone, summary);
+            }
+          }
+
+          processedOrders = orders.map((order: any) => {
+            const phone = order.shippingAddress?.phone;
+            if (!phone) {
+              return { ...order, isRepeat: false, isDuplicate: false, fraudSummary: null };
+            }
+
+            const phoneOrders = ordersByPhone.get(phone) || [];
+            const otherOrders = phoneOrders.filter((o: any) => String(o._id) !== String(order._id));
+
+            if (otherOrders.length === 0) {
+              return {
+                ...order,
+                isRepeat: false,
+                isDuplicate: false,
+                fraudSummary: fraudByPhone.get(phone) || null
+              };
+            }
+
+            const isDuplicate = otherOrders.some((other: any) => {
+              if (!other.items || !order.items || other.items.length !== order.items.length) return false;
+              return order.items.every((item: any) => {
+                return other.items.some((otherItem: any) => {
+                  return String(otherItem.product) === String(item.product) &&
+                         String(otherItem.color || '') === String(item.color || '') &&
+                         String(otherItem.size || '') === String(item.size || '') &&
+                         otherItem.quantity === item.quantity;
+                });
+              });
+            });
+
+            return {
+              ...order,
+              isRepeat: true,
+              isDuplicate,
+              fraudSummary: fraudByPhone.get(phone) || null
+            };
+          });
+        }
+      }
+
       return NextResponse.json({
         orders: processedOrders,
         totalCount,
@@ -665,9 +704,16 @@ export async function GET(req: NextRequest) {
         totalPages: Math.ceil(totalCount / limit),
         statusCounts
       });
+    } else {
+      const [countResult, ordersResult] = await Promise.all([
+        Order.countDocuments(query),
+        Order.find(query)
+          .sort({ createdAt: -1 })
+          .populate('user', 'name email')
+          .lean()
+      ]);
+      return NextResponse.json(ordersResult);
     }
-
-    return NextResponse.json(orders);
   } catch (error) {
     console.error('Error fetching orders:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

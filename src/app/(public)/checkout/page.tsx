@@ -653,10 +653,16 @@ function CheckoutContent() {
   );
 
   return (
-    <div className="container px-4 md:px-6 py-12">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
-        {/* Left Side: Order Summary */}
-        <div className="hidden lg:block sticky top-24 self-start space-y-6">
+    <div className="container px-4 md:px-6 py-6 md:py-12">
+      {/* Mobile-only page header */}
+      <div className="lg:hidden mb-6">
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">চেকআউট</h1>
+        <p className="text-muted-foreground text-sm mt-1">অর্ডারটি সম্পন্ন করতে আপনার তথ্যগুলো পূরণ করুন।</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-start">
+        {/* Left Side: Order Summary (Visible on both mobile & desktop) */}
+        <div className="lg:sticky lg:top-24 self-start space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>অর্ডার লিস্ট</CardTitle>
@@ -721,10 +727,10 @@ function CheckoutContent() {
                             <p className="text-[9px] text-destructive font-black animate-pulse mt-1">
                               INSUFFICIENT STOCK (Available: {
                                 syncData.validItems.find((v: any) => 
-                                  v.productId === item.productId && 
-                                  v.color === item.color && 
-                                  v.size === item.size
-                                ).availableStock
+                                   v.productId === item.productId && 
+                                   v.color === item.color && 
+                                   v.size === item.size
+                                 ).availableStock
                               })
                             </p>
                           )}
@@ -745,7 +751,7 @@ function CheckoutContent() {
 
         {/* Right Side: Delivery & Payment */}
         <div className="space-y-8">
-          <div>
+          <div className="hidden lg:block">
             <h1 className="text-3xl font-bold tracking-tight">চেকআউট</h1>
             <p className="text-muted-foreground mt-2">অর্ডারটি সম্পন্ন করতে আপনার তথ্যগুলো পূরণ করুন।</p>
           </div>
