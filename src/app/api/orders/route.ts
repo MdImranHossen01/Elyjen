@@ -637,8 +637,8 @@ export async function GET(req: NextRequest) {
             Order.find({
               "shippingAddress.phone": { $in: phones },
               deletedAt: null
-            }).select('_id shippingAddress.phone items').lean(),
-            FraudCheck.find({ phone: { $in: phones } }).lean()
+            }).select('_id shippingAddress.phone items.product items.color items.size items.quantity').lean(),
+            FraudCheck.find({ phone: { $in: phones } }).select('phone data').lean()
           ]);
 
           const ordersByPhone = new Map<string, any[]>();

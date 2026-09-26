@@ -56,7 +56,8 @@ function ProductsContent() {
       const data = await response.json();
       setProducts(Array.isArray(data.products) ? data.products : []);
       setPagination(data.pagination || { total: 0, totalPages: 1 });
-    } catch {
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return;
       toast.error('Failed to fetch products');
     } finally {
       setLoading(false);

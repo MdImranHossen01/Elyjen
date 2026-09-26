@@ -45,8 +45,10 @@ export async function GET(req: NextRequest) {
       query.categories = { $in: category.split(',') };
     }
 
+    const isFull = searchParams.get('full') === 'true';
     const [products, total] = await Promise.all([
       Product.find(query)
+        .select(isFull ? '' : '-description')
         .populate('categories', 'name slug')
         .sort({ createdAt: -1 })
         .skip(skip)

@@ -433,9 +433,17 @@ function OrdersContent() {
     const currentQuery = searchParams.toString();
     const newQuery = params.toString();
     if (currentQuery !== newQuery) {
-      router.push(`/admin/orders?${newQuery}`);
+      router.replace(`/admin/orders?${newQuery}`, { scroll: false });
     }
   }, [currentPage, statusFilter, debouncedSearchTerm, dateFilter.from, dateFilter.to]);
+
+  // Load settings once for invoice generation
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setSettings(data); })
+      .catch(() => {});
+  }, []);
 
   // Reset page to 1 when search or status filters change
   useEffect(() => {
@@ -471,7 +479,7 @@ function OrdersContent() {
     await printStickerInvoice(toPrint, settings);
   };
 
-  const fetchOrders = async (pageVal = currentPage) => {
+  const fetchOrders = async (pageVal = currentPage, signal?: AbortSignal) => {
     setLoading(true);
     try {
       const queryParams = new URLSearchParams({
@@ -483,7 +491,7 @@ function OrdersContent() {
         from: dateFilter.from,
         to: dateFilter.to
       });
-      const res = await fetch(`/api/orders?${queryParams.toString()}`);
+      const res = await fetch(`/api/orders?${queryParams.toString()}`, { signal });
       if (!res.ok) {
         throw new Error(`Failed to load orders: ${res.status} ${res.statusText}`);
       }
@@ -494,15 +502,8 @@ function OrdersContent() {
       if (data.statusCounts) {
         setStatusCounts(data.statusCounts);
       }
-
-      // Also fetch settings for the invoice generator (only once)
-      if (!settings) {
-        const settingsRes = await fetch('/api/settings');
-        if (settingsRes.ok) {
-          setSettings(await settingsRes.json());
-        }
-      }
     } catch (error: any) {
+      if (error?.name === 'AbortError') return;
       toast.error(error.message || 'Failed to load orders');
     } finally {
       setLoading(false);
@@ -510,7 +511,9 @@ function OrdersContent() {
   };
 
   useEffect(() => {
-    fetchOrders(currentPage);
+    const controller = new AbortController();
+    fetchOrders(currentPage, controller.signal);
+    return () => controller.abort();
   }, [currentPage, debouncedSearchTerm, statusFilter, dateFilter.from, dateFilter.to]);
 
   useEffect(() => {
