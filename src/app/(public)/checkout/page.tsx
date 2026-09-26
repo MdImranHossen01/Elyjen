@@ -662,70 +662,103 @@ function CheckoutContent() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-start">
         {/* Left Side: Order Summary (Visible on both mobile & desktop) */}
-        <div className="lg:sticky lg:top-24 self-start space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>অর্ডার লিস্ট</CardTitle>
-              <CardDescription>আপনার কার্টে থাকা প্রোডাক্টগুলো।</CardDescription>
+        <div className="lg:sticky lg:top-24 self-start space-y-6 w-full">
+          <Card className="rounded-2xl border shadow-xs overflow-hidden">
+            <CardHeader className="p-4 sm:p-6 pb-3 sm:pb-4 border-b bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+                    অর্ডার লিস্ট
+                  </CardTitle>
+                  <CardDescription className="text-xs">আপনার কার্টে থাকা প্রোডাক্টগুলো</CardDescription>
+                </div>
+                <Badge variant="secondary" className="font-bold text-[11px] px-2.5 py-0.5 rounded-full bg-primary/10 text-primary border-none">
+                  {items.reduce((sum, i) => sum + i.quantity, 0)} টি আইটেম
+                </Badge>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="max-h-[500px] overflow-y-auto space-y-4 pr-2 -mr-2">
+            <CardContent className="p-3 sm:p-6 space-y-3 sm:space-y-4">
+              <div className="max-h-[360px] sm:max-h-[480px] overflow-y-auto overflow-x-hidden space-y-2.5 sm:space-y-3 pr-0.5">
                 {items.map((item, index) => (
-                  <div key={`${item.productId}-${item.color || 'no-color'}-${item.size || 'no-size'}-${index}`} className="flex gap-4 items-start relative group">
-                    <div className="h-16 w-16 rounded-md border bg-muted flex-shrink-0 relative overflow-hidden">
-                      {item.image && <Image src={item.image} alt={item.name || 'Product'} width={64} height={64} className="h-full w-full object-cover" />}
+                  <div 
+                    key={`${item.productId}-${item.color || 'no-color'}-${item.size || 'no-size'}-${index}`} 
+                    className="flex gap-3 sm:gap-4 items-center p-2.5 sm:p-3 rounded-xl bg-muted/30 border border-border/50 relative group transition-colors hover:bg-muted/50"
+                  >
+                    {/* Product Image */}
+                    <div className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg border bg-background flex-shrink-0 relative overflow-hidden shadow-2xs">
+                      {item.image ? (
+                        <Image 
+                          src={item.image} 
+                          alt={item.name || 'Product'} 
+                          width={80} 
+                          height={80} 
+                          className="h-full w-full object-cover" 
+                        />
+                      ) : (
+                        <div className="h-full w-full flex items-center justify-center bg-muted text-muted-foreground text-xs font-bold">
+                          No img
+                        </div>
+                      )}
                     </div>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex justify-between items-start gap-2">
-                        <div className="flex flex-col pr-4">
-                          <p className="text-sm font-bold truncate">{item.name}</p>
+
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5 gap-1.5">
+                      <div className="flex justify-between items-start gap-1.5">
+                        <div className="min-w-0 pr-1">
+                          <p className="text-xs sm:text-sm font-bold text-foreground leading-tight line-clamp-1 sm:line-clamp-2" title={item.name}>
+                            {item.name}
+                          </p>
                           {(item.color || item.size) && (
-                            <p className="text-[10px] text-muted-foreground font-medium">
+                            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[10px] font-medium bg-background/80 text-muted-foreground border border-border/50">
                               {[item.color, item.size].filter(Boolean).join(' / ')}
-                            </p>
+                            </span>
                           )}
                         </div>
                         <button 
+                          type="button"
                           onClick={() => {
                             dispatch(removeFromCart({ productId: item.productId, color: item.color, size: item.size }));
                             toast.info(`${item.name} removed from cart`);
                           }}
-                          className="text-muted-foreground hover:text-destructive transition-colors p-1 -mt-1 -mr-1"
+                          className="h-6 w-6 rounded-full flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors shrink-0 -mr-1"
                           aria-label={`Remove ${item.name} from cart`}
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </div>
                       
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center border rounded-full bg-muted/50 scale-90 -ml-2">
+                      {/* Quantity & Price Row */}
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <div className="flex items-center border rounded-full bg-background h-7 px-1 shadow-2xs">
                           <button 
                             type="button" 
                             onClick={() => handleUpdateQuantity(item, -1)}
-                            className="h-7 w-7 flex items-center justify-center hover:bg-muted rounded-full transition-colors"
+                            className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
                             aria-label={`Decrease quantity of ${item.name}`}
                           >
                             <Minus className="h-3 w-3" />
                           </button>
-                          <span className="w-6 text-center text-xs font-bold">{item.quantity}</span>
+                          <span className="w-5 text-center text-xs font-bold select-none">{item.quantity}</span>
                           <button 
                             type="button"
                             onClick={() => handleUpdateQuantity(item, 1)}
-                            className="h-7 w-7 flex items-center justify-center hover:bg-muted rounded-full transition-colors"
+                            className="h-5 w-5 flex items-center justify-center hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground"
                             aria-label={`Increase quantity of ${item.name}`}
                           >
                             <Plus className="h-3 w-3" />
                           </button>
                         </div>
+
                         <div className="text-right">
-                          <p className="text-sm font-bold text-primary">৳{Math.round(item.price * item.quantity)}</p>
+                          <p className="text-sm sm:text-base font-black text-primary tracking-tight">৳{Math.round(item.price * item.quantity)}</p>
                           {syncData?.validItems?.find((v: any) => 
                             v.productId === item.productId && 
                             v.color === item.color && 
                             v.size === item.size
                           )?.isInsufficient && (
-                            <p className="text-[9px] text-destructive font-black animate-pulse mt-1">
-                              INSUFFICIENT STOCK (Available: {
+                            <p className="text-[9px] text-destructive font-black animate-pulse">
+                              স্টক নেই (আছে: {
                                 syncData.validItems.find((v: any) => 
                                    v.productId === item.productId && 
                                    v.color === item.color && 
@@ -740,10 +773,14 @@ function CheckoutContent() {
                   </div>
                 ))}
               </div>
-              <Separator />
-              <div className="flex justify-between items-center pt-2">
-                <span className="text-base font-bold">আইটেম টোটাল</span>
-                <span className="text-xl font-black text-primary">৳{Math.round(totalAmount)}</span>
+
+              {/* Total Row */}
+              <div className="pt-3 border-t border-border flex justify-between items-center">
+                <div className="flex flex-col">
+                  <span className="text-xs sm:text-sm font-bold text-foreground">আইটেম টোটাল</span>
+                  <span className="text-[10px] text-muted-foreground">ডেলিভারি চার্জ পরবর্তী ধাপে যোগ হবে</span>
+                </div>
+                <span className="text-lg sm:text-2xl font-black text-primary">৳{Math.round(totalAmount)}</span>
               </div>
             </CardContent>
           </Card>
