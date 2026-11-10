@@ -4,6 +4,7 @@ import connectToDatabase from '@/lib/db';
 import Blog from '@/models/Blog';
 import { auth } from '@/auth';
 import mongoose from 'mongoose';
+import { purgeCloudflareCache } from '@/lib/cloudflareCache';
 import { getTenantDomain } from '@/lib/tenant';
 
 export async function GET(
@@ -104,6 +105,8 @@ export async function PUT(
       console.error('[Admin Blog Update revalidatePath] error:', revalidateError);
     }
 
+    purgeCloudflareCache().catch(() => {});
+
     return NextResponse.json(blog);
   } catch (error: any) {
     console.error('[Admin Blog PUT] error:', error);
@@ -138,6 +141,17 @@ export async function DELETE(
       return NextResponse.json({ message: 'Blog not found' }, { status: 404 });
     }
 
+    // Delete blog image from Cloudflare R2
+    const imagesToDelete = [blog.thumbnail, (blog as any).featuredImage, (blog as any).image].filter(Boolean);
+    if (imagesToDelete.length > 0) {
+      try {
+        const { deleteMultipleFromR2 } = await import('@/lib/r2');
+        await deleteMultipleFromR2(imagesToDelete);
+      } catch (r2Err) {
+        console.error('Failed to delete blog images from Cloudflare R2:', r2Err);
+      }
+    }
+
     // Revalidate paths after deletion
     try {
       revalidatePath('/');
@@ -148,7 +162,9 @@ export async function DELETE(
       console.error('[Admin Blog Delete revalidatePath] error:', revalidateError);
     }
 
-    return NextResponse.json({ message: 'Blog deleted successfully' });
+    purgeCloudflareCache().catch(() => {});
+
+    return NextResponse.json({ message: 'Blog deleted successfully and image removed from R2' });
   } catch (error: any) {
     console.error('[Admin Blog DELETE] error:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

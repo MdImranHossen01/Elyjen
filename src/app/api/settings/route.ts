@@ -223,6 +223,11 @@ export async function POST(req: NextRequest) {
     revalidatePath('/shop', 'page');
     revalidatePath('/blog', 'page');
 
+    try {
+      const { purgeCloudflareCache } = await import('@/lib/cloudflareCache');
+      purgeCloudflareCache().catch(() => {});
+    } catch {}
+
     // Mask sensitive response data for the return
     const updatedRaw = settings.toObject({ getters: false });
     const updatedMasked = settings.toObject({ getters: true });

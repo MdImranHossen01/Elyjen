@@ -7,6 +7,7 @@ import Product from '@/models/Product';
 import { auth } from '@/auth';
 import { generateUniqueSlug } from '@/lib/slugify-server';
 import { CACHE_TAGS } from '@/lib/data-fetching';
+import { purgeCloudflareCache } from '@/lib/cloudflareCache';
 
 // GET a single product
 export async function GET(
@@ -161,6 +162,11 @@ export async function PUT(
     }
 
     revalidateTag('products', 'max');
+    revalidatePath('/', 'layout');
+    revalidatePath('/shop', 'page');
+    revalidatePath('/products', 'page');
+    revalidatePath(`/products/${slug}`, 'page');
+    purgeCloudflareCache().catch(() => {});
 
     return NextResponse.json(updatedProduct);
   } catch (error) {
@@ -194,13 +200,41 @@ export async function DELETE(
       return NextResponse.json({ message: 'Product not found' }, { status: 404 });
     }
 
+    // Collect images to delete from Cloudflare R2
+    const imagesToDelete: string[] = [];
+    if (Array.isArray(deletedProduct.images)) imagesToDelete.push(...deletedProduct.images);
+    if ((deletedProduct as any).image) imagesToDelete.push((deletedProduct as any).image);
+    if ((deletedProduct as any).featuredImage) imagesToDelete.push((deletedProduct as any).featuredImage);
+    if ((deletedProduct as any).thumbnail) imagesToDelete.push((deletedProduct as any).thumbnail);
+    if (Array.isArray(deletedProduct.variants)) {
+      deletedProduct.variants.forEach((v: any) => {
+        if (v?.image) imagesToDelete.push(v.image);
+        if (Array.isArray(v?.images)) imagesToDelete.push(...v.images);
+      });
+    }
+
+    if (imagesToDelete.length > 0) {
+      try {
+        const { deleteMultipleFromR2 } = await import('@/lib/r2');
+        await deleteMultipleFromR2(imagesToDelete);
+      } catch (r2CleanErr) {
+        console.error('Failed to clean up product images from Cloudflare R2:', r2CleanErr);
+      }
+    }
+
     try {
       await revalidateTag(CACHE_TAGS.products, 'max');
+      revalidatePath('/', 'layout');
+      revalidatePath('/shop', 'page');
+      revalidatePath('/products', 'page');
+      revalidatePath(`/products/${slug}`, 'page');
     } catch (revalidateError) {
       console.error('Failed to revalidate product tags:', revalidateError);
     }
 
-    return NextResponse.json({ message: 'Product deleted successfully' });
+    purgeCloudflareCache().catch(() => {});
+
+    return NextResponse.json({ message: 'Product deleted successfully and images purged from R2' });
   } catch (error) {
     console.error('Error deleting product:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

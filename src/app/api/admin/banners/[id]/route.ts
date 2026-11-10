@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/db';
 import Banner from '@/models/Banner';
 import { auth } from '@/auth';
 import mongoose from 'mongoose';
+import { purgeCloudflareCache } from '@/lib/cloudflareCache';
 
 export async function PUT(
   req: NextRequest,
@@ -27,6 +28,8 @@ export async function PUT(
     if (!banner) {
       return NextResponse.json({ message: 'Banner not found' }, { status: 404 });
     }
+
+    purgeCloudflareCache().catch(() => {});
 
     return NextResponse.json(banner);
   } catch (error) {
@@ -57,7 +60,20 @@ export async function DELETE(
       return NextResponse.json({ message: 'Banner not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ message: 'Banner deleted successfully' });
+    // Delete banner images from Cloudflare R2
+    const imagesToDelete = [banner.image, (banner as any).imageUrl, (banner as any).mobileImageUrl].filter(Boolean);
+    if (imagesToDelete.length > 0) {
+      try {
+        const { deleteMultipleFromR2 } = await import('@/lib/r2');
+        await deleteMultipleFromR2(imagesToDelete);
+      } catch (r2Err) {
+        console.error('Failed to delete banner images from Cloudflare R2:', r2Err);
+      }
+    }
+
+    purgeCloudflareCache().catch(() => {});
+
+    return NextResponse.json({ message: 'Banner deleted successfully and image removed from R2' });
   } catch (error) {
     console.error('Delete Banner Error:', error);
     return NextResponse.json({ message: 'Internal Server Error' }, { status: 500 });

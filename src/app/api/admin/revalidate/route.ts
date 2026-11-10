@@ -1,7 +1,7 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { revalidateTag, revalidatePath } from 'next/cache';
 import { auth } from '@/auth';
+import { purgeCloudflareCache } from '@/lib/cloudflareCache';
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
     }
 
-    const { tag, path } = await req.json();
+    const { tag, path } = await req.json().catch(() => ({}));
 
     if (tag) {
       revalidateTag(tag, 'max');
@@ -33,9 +33,11 @@ export async function POST(req: NextRequest) {
       console.log('Revalidated all main tags');
     }
 
-    return NextResponse.json({ message: 'Revalidation successful' });
+    // Automatically purge Cloudflare Edge Cache
+    await purgeCloudflareCache();
+
+    return NextResponse.json({ message: 'Revalidation successful and Cloudflare Cache purged' });
   } catch (error: any) {
     return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
-

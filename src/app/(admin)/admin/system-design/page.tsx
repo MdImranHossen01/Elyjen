@@ -32,6 +32,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ImageUpload } from '@/components/ui/image-upload';
+import { R2MediaCleaner } from '@/components/admin/R2MediaCleaner';
 import Swal from 'sweetalert2';
 import { districts } from '@/lib/bd-locations';
 
@@ -852,6 +853,11 @@ export default function SuperConfigPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Cloudflare R2 Storage & Media Cleaner */}
+        <div className="lg:col-span-3">
+          <R2MediaCleaner />
+        </div>
 
       </div>
 

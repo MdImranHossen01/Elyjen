@@ -7,6 +7,7 @@ import Category from '@/models/Category';
 import Product from '@/models/Product';
 import { auth } from '@/auth';
 import { getTenantDomain } from '@/lib/tenant';
+import { purgeCloudflareCache } from '@/lib/cloudflareCache';
 
 // GET a single category
 export async function GET(
@@ -80,6 +81,7 @@ export async function PUT(
 
     await revalidateTag('categories', 'max');
     revalidatePath('/');
+    purgeCloudflareCache().catch(() => {});
 
     return NextResponse.json(updatedCategory);
   } catch (error) {
@@ -141,6 +143,19 @@ export async function DELETE(
       } catch (e) {
         console.error('Revalidation error:', e);
       }
+
+      // Delete category image from Cloudflare R2
+      const imagesToDelete = [category.image, (category as any).banner].filter(Boolean);
+      if (imagesToDelete.length > 0) {
+        try {
+          const { deleteMultipleFromR2 } = await import('@/lib/r2');
+          await deleteMultipleFromR2(imagesToDelete);
+        } catch (r2Err) {
+          console.error('Failed to delete category images from R2:', r2Err);
+        }
+      }
+
+      purgeCloudflareCache().catch(() => {});
 
       return NextResponse.json({ message: 'Category deleted successfully' });
     } finally {
