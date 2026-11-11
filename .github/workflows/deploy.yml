@@ -67,7 +67,7 @@ jobs:
                 container_name: elyjen-shop-app
                 restart: unless-stopped
                 ports:
-                  - "3000:3000"
+                  - "3013:3000"
                 environment:
                   - NODE_OPTIONS=--max-old-space-size=125
                 env_file:
