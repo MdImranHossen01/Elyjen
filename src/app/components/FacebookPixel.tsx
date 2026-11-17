@@ -46,6 +46,14 @@ export default function FacebookPixel({
 
   useEffect(() => {
     if (!mounted || !pixelId || !scriptLoaded) return;
+    if (
+      pathname.startsWith('/admin') ||
+      pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/login') ||
+      pathname.startsWith('/register')
+    ) {
+      return;
+    }
     trackPageView();
   }, [pathname, searchParams, trackPageView, pixelId, mounted, scriptLoaded]);
 
@@ -62,7 +70,7 @@ export default function FacebookPixel({
       <Script
         id="fb-pixel"
         strategy="afterInteractive"
-        onLoad={() => setScriptLoaded(true)}
+        onReady={() => setScriptLoaded(true)}
         dangerouslySetInnerHTML={{
           __html: `
             !function(f,b,e,v,n,t,s)
@@ -74,6 +82,7 @@ export default function FacebookPixel({
             s.parentNode.insertBefore(t,s)}(window, document,'script',
             'https://connect.facebook.net/en_US/fbevents.js');
             fbq('set', 'autoConfig', false, '${sanitizedPixelId}');
+            window.__fbPixelId = '${sanitizedPixelId}';
             fbq('init', '${sanitizedPixelId}');
           `,
         }}
