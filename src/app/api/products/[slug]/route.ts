@@ -166,7 +166,7 @@ export async function PUT(
     revalidatePath('/shop', 'page');
     revalidatePath('/products', 'page');
     revalidatePath(`/products/${slug}`, 'page');
-    purgeCloudflareCache().catch(() => {});
+    await purgeCloudflareCache().catch(() => {});
 
     return NextResponse.json(updatedProduct);
   } catch (error) {
@@ -232,7 +232,7 @@ export async function DELETE(
       console.error('Failed to revalidate product tags:', revalidateError);
     }
 
-    purgeCloudflareCache().catch(() => {});
+    await purgeCloudflareCache().catch(() => {});
 
     return NextResponse.json({ message: 'Product deleted successfully and images purged from R2' });
   } catch (error) {

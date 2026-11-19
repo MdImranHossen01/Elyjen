@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import connectToDatabase from '@/lib/db';
 import FAQ from '@/models/FAQ';
 import { auth } from '@/auth';
+import { purgeCloudflareCache } from '@/lib/cloudflareCache';
 
 export async function GET() {
   try {
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
     const faq = await FAQ.create({
         ...sanitizedData,
     });
+    await purgeCloudflareCache().catch(() => {});
     return NextResponse.json(faq, { status: 201 });
   } catch (error) {
     console.error('Create FAQ Error:', error);

@@ -225,7 +225,7 @@ export async function POST(req: NextRequest) {
 
     try {
       const { purgeCloudflareCache } = await import('@/lib/cloudflareCache');
-      purgeCloudflareCache().catch(() => {});
+      await purgeCloudflareCache().catch(() => {});
     } catch {}
 
     // Mask sensitive response data for the return

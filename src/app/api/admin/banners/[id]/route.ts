@@ -29,7 +29,7 @@ export async function PUT(
       return NextResponse.json({ message: 'Banner not found' }, { status: 404 });
     }
 
-    purgeCloudflareCache().catch(() => {});
+    await purgeCloudflareCache().catch(() => {});
 
     return NextResponse.json(banner);
   } catch (error) {
@@ -71,7 +71,7 @@ export async function DELETE(
       }
     }
 
-    purgeCloudflareCache().catch(() => {});
+    await purgeCloudflareCache().catch(() => {});
 
     return NextResponse.json({ message: 'Banner deleted successfully and image removed from R2' });
   } catch (error) {

@@ -3,6 +3,7 @@ import connectToDatabase from '@/lib/db';
 import FAQ from '@/models/FAQ';
 import { auth } from '@/auth';
 import mongoose from 'mongoose';
+import { purgeCloudflareCache } from '@/lib/cloudflareCache';
 
 export async function PATCH(
   req: NextRequest,
@@ -50,6 +51,7 @@ export async function PATCH(
       return NextResponse.json({ message: 'FAQ not found' }, { status: 404 });
     }
 
+    await purgeCloudflareCache().catch(() => {});
     return NextResponse.json(faq);
   } catch (error) {
     console.error('Update FAQ Error:', error);
@@ -83,6 +85,7 @@ export async function DELETE(
       return NextResponse.json({ message: 'FAQ not found' }, { status: 404 });
     }
 
+    await purgeCloudflareCache().catch(() => {});
     return NextResponse.json({ message: 'FAQ deleted successfully' });
   } catch (error) {
     console.error('Delete FAQ Error:', error);
